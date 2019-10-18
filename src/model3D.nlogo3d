@@ -60,6 +60,8 @@ monocytes-own [
   signal-strength
   ;; define the signal value depending on surrounding cancer cells
   monocyte-signal-value
+  number-of-encountered-cancer-cells
+  timer-meet-cancer-cells
 ]
 
 cancer-cells-own [
@@ -78,7 +80,7 @@ cancer-cells-own [
   late-apoptotic?
   late-apoptotic-duration
   surrounding-cells-counter
-  time-spent-alone
+
 ]
 
 
@@ -183,6 +185,8 @@ to setup-monocytes
     set breed monocytes
     set signal-strength 0
     set monocyte-signal-value 0
+    set number-of-encountered-cancer-cells 0
+    set timer-meet-cancer-cells 1 * 24 ;; monocytes have 6 hours to meet enough red cancer cells and enter differentiation otherwise the timer is reset to max
     setup-strength-function
 
     if (not headless-mode?) [
@@ -231,7 +235,6 @@ to setup-cancer-cells
     set late-apoptotic? false
     set late-apoptotic-duration -1
     set surrounding-cells-counter 0
-    set time-spent-alone 0
     if (not headless-mode?) [ set color red ]
   ]
 
@@ -302,10 +305,6 @@ to common-go-procedures ;; between headless and gui modes
     ifelse (blocked-apoptosis?)
     [ move 6 nobody ]
     [
-      set surrounding-cells-counter count neighbors
-      ifelse (surrounding-cells-counter < 20)
-      [set time-spent-alone time-spent-alone + 1]
-      [set time-spent-alone 0]
       look-for-NLC
     ]
   ]
@@ -317,6 +316,7 @@ to common-go-procedures ;; between headless and gui modes
     ifelse (any? debris)
     ;; phagocyte
     [ ask one-of debris [die] ]
+
     ;; move if not NLC
     [ if (signal-strength < 100) [ move 1 nobody ] ]
   ]
@@ -428,6 +428,15 @@ to enter-blocked-apoptosis ;; cancer cell procedure
   ]
 end
 
+to-report encounted-enough-cancer-cells ;; monocyte procedure
+  let encountered-cancer-cells
+  cancer-cells
+  in-radius 1
+  set number-of-encountered-cancer-cells number-of-encountered-cancer-cells + count encountered-cancer-cells
+  report (number-of-encountered-cancer-cells > 75)
+end
+
+
 to update-counters
 
   ;; cancer cells
@@ -440,14 +449,14 @@ to update-counters
       ifelse (ticks > late-apoptotic-duration)
       ;; change from late apoptosis to dead
       [
-        set time-spent-alone 0
+
         set breed dead-cells
         if (not headless-mode?) [ set color grey ]
       ]
       ;; change from early apoptosis to late apoptosis
       [
         if (ticks > early-apoptotic-duration) [
-          set time-spent-alone 0
+
           set early-apoptotic? false
           set late-apoptotic? true
           if (not headless-mode?) [ set color yellow ]
@@ -566,16 +575,39 @@ to update-counters
     ifelse (signal-strength < 100)
     ;; increase the signal strength and signal value
     [
-      set signal-strength (slope-strength * ticks + intercept-strength)
-      ;; print signal-strength
+      ;; if still in the time frame
+      ifelse (timer-meet-cancer-cells > 0)
+      [
+        let allowed-to-differentiate encounted-enough-cancer-cells
+        ifelse (allowed-to-differentiate)
+        [
+          set signal-strength (slope-strength * ticks + intercept-strength)
+          ;; print signal-strength
 
-      ;; set monocyte-signal-value depending on number of surrounding cancer cells
-      ifelse (count(cancer-cells-on neighbors) > 0)
-      [set monocyte-signal-value (signal-strength / count(cancer-cells-on neighbors))]
-      [set monocyte-signal-value signal-strength]
+          ;; set monocyte-signal-value depending on number of surrounding cancer cells
+          ifelse (count(cancer-cells-on neighbors) > 0)
+          [set monocyte-signal-value (signal-strength / count(cancer-cells-on neighbors))]
+          [set monocyte-signal-value signal-strength]
+        ]
+        ;; not allowed to differentiate
+        [
+          ;; timer ticks down
+          set timer-meet-cancer-cells timer-meet-cancer-cells - 1
+        ]
+      ]
+      ;; otherwise out of time for exploration
+      [
+        ;; reset exploration for cancer cells to allow differentiation
+        set timer-meet-cancer-cells 1 * 24
+        set number-of-encountered-cancer-cells 0
+      ]
+
     ]
-    ;; change from monocytes to NLC state
-    [ if (not headless-mode?) [ set color green ] ]
+    [
+      ;; change from monocytes to NLC state
+      set timer-meet-cancer-cells -1
+      if (not headless-mode?) [ set color green ]
+    ]
   ]
 end
 
@@ -779,7 +811,6 @@ PENS
 "total cancer cells" 1.0 0 -16777216 true "" "plot count cancer-cells"
 "blocked apoptosis" 1.0 0 -2064490 true "" "plot count cancer-cells with [blocked-apoptosis?]"
 "late + dead = debris" 1.0 0 -6459832 true "" "plot count (cancer-cells with [late-apoptotic?]) + count (dead-cells)"
-"viability" 1.0 0 -7500403 true "" "plot (count cancer-cells / (count cancer-cells + count dead-cells)) * 100"
 
 MONITOR
 11
@@ -999,7 +1030,7 @@ INPUTBOX
 330
 205
 gui-NLC-signal-strength-threshold
-20.0
+0.0
 1
 0
 Number
@@ -1010,7 +1041,7 @@ INPUTBOX
 330
 265
 gui-NLC-signal-perception-threshold
-10.0
+5.0
 1
 0
 Number
@@ -1031,18 +1062,19 @@ PLOT
 515
 935
 777
-viability
+viability & survival rate
 time
-viability %
+%
 0.0
 10.0
 0.0
 100.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot \n(100 - \n( \n(count(dead-cells)/ (count(cancer-cells) + count(dead-cells))) * 100\n)\n)"
+"Viability" 1.0 0 -16777216 true "" "plot \n(100 - \n( \n(count(dead-cells)/ (count(cancer-cells) + count(dead-cells))) * 100\n)\n)"
+"Survival" 1.0 0 -11221820 true "" "plot  ((count cancer-cells / nb-cancer-cells-init)) * 100"
 
 MONITOR
 85
@@ -1052,6 +1084,17 @@ MONITOR
 Average Signal
 (sum ([signal-strength] of monocytes) )/ (count monocytes)
 2
+1
+11
+
+MONITOR
+245
+683
+646
+728
+Avg number-of-encountered-cancer-cells
+(sum ([number-of-encountered-cancer-cells] of monocytes) )/ (count monocytes)
+17
 1
 11
 
