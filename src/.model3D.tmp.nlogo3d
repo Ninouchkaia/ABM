@@ -36,6 +36,8 @@ globals [
   NLC-signal-perception-threshold
   blocked-apoptosis-threshold
   proliferation-time-threshold
+  differentiation-start
+  differentiation-end
 
   ;; outputs for headless mode
   nb-cancer-cells
@@ -153,6 +155,12 @@ to setup-globals
 
   ;; cancer cells proliferation timer when they enter blocked apoptosis
   set proliferation-time-threshold gui-proliferation-time-threshold * 24
+
+  ;; monocytes differentation starts and ends
+  set differentiation-start gui-differentiation-start
+  set differentiation-end gui-differentiation-end
+
+
 end
 
 
@@ -190,7 +198,7 @@ to setup-monocytes
     set signal-strength 0
     set monocyte-signal-value 0
     set number-of-encountered-cancer-cells 0
-    set timer-meet-cancer-cells 1 * 24 ;; monocytes have 6 hours to meet enough red cancer cells and enter differentiation otherwise the timer is reset to max
+    set timer-meet-cancer-cells 1 * 24 ;; monocytes have 24 hours to meet enough red cancer cells and enter differentiation otherwise the timer is reset to max
     setup-strength-function
 
     if (not headless-mode?) [
@@ -203,7 +211,7 @@ end
 to setup-strength-function
   ;; draw start-date date of signal emission
   ;;let mean-s 2.5 * 24; 60h
-  let mean-s 1.5 * 24; 60h
+  let mean-s differentiation-start * 24; 60
   let sd-s 6
   let var-s sd-s * sd-s ; 36h²
   let start-date floor random-gamma ((mean-s * mean-s) / var-s) (mean-s / var-s)
@@ -439,7 +447,7 @@ to-report encounted-enough-cancer-cells ;; monocyte procedure
   cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]
   in-radius 1
   set number-of-encountered-cancer-cells number-of-encountered-cancer-cells + count encountered-cancer-cells
-  report (number-of-encountered-cancer-cells > ) ;; i put volontarily low threshold not to take this effect into account
+  report (number-of-encountered-cancer-cells > 80) ;; you can put 0 threshold not to take this effect into account
 end
 
 
@@ -587,6 +595,7 @@ to update-counters
       ;-------------------------------------------------------------------------------
       ;------------------------ with timers END --------------------------------------
       ;-------------------------------------------------------------------------------
+
     ]
   ]
 
@@ -676,7 +685,7 @@ GRAPHICS-WINDOW
 -4
 4
 1
-1
+0
 1
 ticks
 30.0
@@ -727,10 +736,10 @@ NIL
 1
 
 MONITOR
-10
-497
-98
-542
+2
+581
+90
+626
 cancer cells
 count cancer-cells
 17
@@ -748,10 +757,10 @@ model
 1
 
 MONITOR
-10
-542
-98
-587
+2
+626
+90
+671
 monocytes
 count monocytes with [signal-strength < 100]
 17
@@ -759,10 +768,10 @@ count monocytes with [signal-strength < 100]
 11
 
 MONITOR
-11
-587
-99
-632
+3
+671
+91
+716
 NLCs
 count monocytes with [signal-strength >= 100]
 17
@@ -787,10 +796,10 @@ NIL
 1
 
 MONITOR
-10
-452
-99
-497
+2
+536
+91
+581
 NIL
 count turtles
 17
@@ -798,10 +807,10 @@ count turtles
 11
 
 MONITOR
-11
-677
-117
-722
+3
+761
+109
+806
 allowed patches
 count patches with [not forbidden]
 17
@@ -833,10 +842,10 @@ PENS
 "late + dead = debris" 1.0 0 -6459832 true "" "plot count (cancer-cells with [late-apoptotic?]) + count (dead-cells)"
 
 MONITOR
-11
-632
-99
-677
+3
+716
+91
+761
 dead cells
 count dead-cells
 17
@@ -844,10 +853,10 @@ count dead-cells
 11
 
 MONITOR
-99
-498
-231
-543
+91
+582
+223
+627
 apoptotic
 count cancer-cells with [early-apoptotic? or late-apoptotic?]
 17
@@ -855,10 +864,10 @@ count cancer-cells with [early-apoptotic? or late-apoptotic?]
 11
 
 MONITOR
-99
-453
-231
-498
+91
+537
+223
+582
 blocked-apoptosis
 count cancer-cells with [blocked-apoptosis?]
 17
@@ -904,7 +913,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-3.0
+2.0
 1
 0
 Number
@@ -979,10 +988,10 @@ PENS
 "NLCs" 1.0 0 -10899396 true "" "plot count monocytes with [signal-strength >= 100]"
 
 MONITOR
-99
-543
-230
-588
+91
+627
+222
+672
 early-apoptotic
 count cancer-cells with [early-apoptotic?]
 17
@@ -990,10 +999,10 @@ count cancer-cells with [early-apoptotic?]
 11
 
 MONITOR
-100
-588
-230
-633
+90
+672
+220
+717
 late-apoptotic
 count cancer-cells with [late-apoptotic?]
 17
@@ -1001,10 +1010,10 @@ count cancer-cells with [late-apoptotic?]
 11
 
 MONITOR
-231
-588
-370
-633
+221
+672
+360
+717
 late-apoptotic-duration
 ((sum [late-apoptotic-duration] of cancer-cells with [late-apoptotic?]) / (count cancer-cells with [late-apoptotic?])) - ticks
 2
@@ -1012,10 +1021,10 @@ late-apoptotic-duration
 11
 
 MONITOR
-11
-721
-85
-766
+3
+805
+77
+850
 ticks
 ticks / 24
 1
@@ -1023,10 +1032,10 @@ ticks / 24
 11
 
 MONITOR
-230
-543
-376
-588
+222
+627
+368
+672
 early-apoptotic-duration
 ((sum [early-apoptotic-duration] of cancer-cells with [early-apoptotic?]) / (count cancer-cells with [early-apoptotic?])) - ticks
 2
@@ -1034,10 +1043,10 @@ early-apoptotic-duration
 11
 
 MONITOR
-231
-498
-347
-543
+223
+582
+339
+627
 apoptotic-duration
 (((sum [late-apoptotic-duration] of cancer-cells with [late-apoptotic?]) / (count cancer-cells with [late-apoptotic?])) - ticks)\n+\n(((sum [early-apoptotic-duration] of cancer-cells with [early-apoptotic?]) / (count cancer-cells with [early-apoptotic?])) - ticks)
 2
@@ -1072,7 +1081,7 @@ INPUTBOX
 330
 324
 gui-blocked-apoptosis-threshold
-50.0
+10.0
 1
 0
 Number
@@ -1098,10 +1107,10 @@ PENS
 "Remaining Cell Ratio" 1.0 0 -2674135 true "" "plot \n(\n( \n((count(cancer-cells) + count(dead-cells)) / nb-cancer-cells-init) * 100\n)\n)"
 
 MONITOR
-85
-721
-184
-766
+77
+805
+176
+850
 Average Signal
 (sum ([signal-strength] of monocytes) )/ (count monocytes)
 2
@@ -1109,10 +1118,10 @@ Average Signal
 11
 
 MONITOR
-99
-633
-342
-678
+91
+717
+334
+762
 Avg number-of-encountered-cancer-cells
 (sum ([number-of-encountered-cancer-cells] of monocytes) )/ (count monocytes)
 17
@@ -1125,7 +1134,29 @@ INPUTBOX
 330
 442
 gui-proliferation-time-threshold
-3.2
+1.5
+1
+0
+Number
+
+INPUTBOX
+8
+442
+169
+502
+gui-differentiation-start
+2.5
+1
+0
+Number
+
+INPUTBOX
+168
+442
+329
+502
+gui-differentiation-end
+7.0
 1
 0
 Number
