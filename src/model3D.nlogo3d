@@ -35,6 +35,7 @@ globals [
   NLC-signal-strength-threshold
   NLC-signal-perception-threshold
   blocked-apoptosis-threshold
+  proliferation-time-threshold
 
   ;; outputs for headless mode
   nb-cancer-cells
@@ -80,7 +81,7 @@ cancer-cells-own [
   late-apoptotic?
   late-apoptotic-duration
   surrounding-cells-counter
-
+  proliferation-timer
 ]
 
 
@@ -149,6 +150,9 @@ to setup-globals
 
   ;; threshold for cancer cell accumulated anti-apoptotic signal above which it will enter blocked apoptosis
   set blocked-apoptosis-threshold gui-blocked-apoptosis-threshold
+
+  ;; cancer cells proliferation timer when they enter blocked apoptosis
+  set proliferation-time-threshold gui-proliferation-time-threshold * 24
 end
 
 
@@ -198,7 +202,8 @@ end
 
 to setup-strength-function
   ;; draw start-date date of signal emission
-  let mean-s 2.5 * 24; 60h
+  ;;let mean-s 2.5 * 24; 60h
+  let mean-s 1.5 * 24; 60h
   let sd-s 6
   let var-s sd-s * sd-s ; 36h²
   let start-date floor random-gamma ((mean-s * mean-s) / var-s) (mean-s / var-s)
@@ -424,16 +429,17 @@ to enter-blocked-apoptosis ;; cancer cell procedure
     set early-apoptotic? false
     set early-apoptotic-duration -1
     set late-apoptotic-duration -1
+    set proliferation-timer proliferation-time-threshold
     if (not headless-mode?) [ set color pink ]
   ]
 end
 
 to-report encounted-enough-cancer-cells ;; monocyte procedure
   let encountered-cancer-cells
-  cancer-cells
+  cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]
   in-radius 1
   set number-of-encountered-cancer-cells number-of-encountered-cancer-cells + count encountered-cancer-cells
-  report (number-of-encountered-cancer-cells > 75)
+  report (number-of-encountered-cancer-cells > 0) ;; you can put 0 threshold not to take this effect into account
 end
 
 
@@ -474,20 +480,34 @@ to update-counters
       ;++++++++++++++++++++++++ with counters START ++++++++++++++++++++++++++++++++++
       ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-;        ifelse (blocked-apoptosis-counter >= blocked-apoptosis-duration * 24)
-;        ;; change from blocked apoptosis to needing signal
-;        [
-;          ;; reset the blocked apoptosis state
-;          set blocked-apoptosis? false
-;          set blocked-apoptosis-counter 0
-;          ;; start the counter for time spent in the needing signal state
-;          set need-signal-duration 0
-;          ;; reset accumulated anti-apoptotic signals to 0
-;          set sum-anti-apoptotic-signals 0
-;          if (not headless-mode?) [ set color red ]
-;        ]
-;        ;; increment the counter for time spent in the blocked apoptosis state
-;        [ set blocked-apoptosis-counter blocked-apoptosis-counter + 1 ]
+        ifelse (blocked-apoptosis-counter >= blocked-apoptosis-duration * 24)
+        ;; change from blocked apoptosis to needing signal
+        [
+          ;; reset the blocked apoptosis state
+          set blocked-apoptosis? false
+          set blocked-apoptosis-counter 0
+          ;; start the counter for time spent in the needing signal state
+          set need-signal-duration 0
+          ;; reset accumulated anti-apoptotic signals to 0
+          set sum-anti-apoptotic-signals 0
+          if (not headless-mode?) [ set color red ]
+        ]
+
+        [
+          ifelse (proliferation-timer > 0)
+          ;; decrement the timer for proliferation
+          [set proliferation-timer proliferation-timer - 1]
+          ;; divide and transfer all parameters to daughter cancer cell
+          [
+            set proliferation-timer proliferation-time-threshold
+            hatch 1
+          ]
+
+          ;; increment the counter for time spent in the blocked apoptosis state
+          set blocked-apoptosis-counter blocked-apoptosis-counter + 1
+        ]
+
+
 
       ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ;++++++++++++++++++++++++ with counters END ++++++++++++++++++++++++++++++++++++
@@ -498,21 +518,21 @@ to update-counters
       ;------------------------ with timers START ------------------------------------
       ;-------------------------------------------------------------------------------
 
-        ifelse (blocked-apoptosis-timer = 0)
-        ;; change from blocked apoptosis to needing signal
-        [
-          ;; reset the blocked apoptosis state
-          set blocked-apoptosis? false
-          set blocked-apoptosis-timer blocked-apoptosis-duration * 24
-          ;; start the timer for time spent in the needing signal state
-          set need-signal-timer need-signal-duration * 24
-          ;; reset accumulated anti-apoptotic signals to 0
-          set sum-anti-apoptotic-signals 0
-          if (not headless-mode?) [ set color red ]
-        ]
-        ;; decrement the timer for time spent in the blocked apoptosis state
-        [set blocked-apoptosis-timer blocked-apoptosis-timer - 1]
-
+;        ifelse (blocked-apoptosis-timer = 0)
+;        ;; change from blocked apoptosis to needing signal
+;        [
+;          ;; reset the blocked apoptosis state
+;          set blocked-apoptosis? false
+;          set blocked-apoptosis-timer blocked-apoptosis-duration * 24
+;          ;; start the timer for time spent in the needing signal state
+;          set need-signal-timer need-signal-duration * 24
+;          ;; reset accumulated anti-apoptotic signals to 0
+;          set sum-anti-apoptotic-signals 0
+;          if (not headless-mode?) [ set color red ]
+;        ]
+;        ;; decrement the timer for time spent in the blocked apoptosis state
+;        [set blocked-apoptosis-timer blocked-apoptosis-timer - 1]
+;
       ;-------------------------------------------------------------------------------
       ;------------------------ with timers END --------------------------------------
       ;-------------------------------------------------------------------------------
@@ -524,21 +544,21 @@ to update-counters
       ;++++++++++++++++++++++++ with counters START ++++++++++++++++++++++++++++++++++
       ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-;      [
-;        ;; necessarily in the needing signal state
-;        ifelse (need-signal-counter >= need-signal-duration * 24)
-;        ;; change from needing signal to early apoptosis
-;        [
-;          ;; reset the needing signal state
-;          set need-signal-counter 0
-;          ;; setup the apoptosis state
-;          set early-apoptotic? true
-;          setup-apoptotic-durations
-;          if (not headless-mode?) [ set color orange ]
-;        ]
-;        ;; increment the counter for time spent in the needing signal state
-;        [ set need-signal-counter need-signal-counter + 1 ]
-;      ]
+      [
+        ;; necessarily in the needing signal state
+        ifelse (need-signal-counter >= need-signal-duration * 24)
+        ;; change from needing signal to early apoptosis
+        [
+          ;; reset the needing signal state
+          set need-signal-counter 0
+          ;; setup the apoptosis state
+          set early-apoptotic? true
+          setup-apoptotic-durations
+          if (not headless-mode?) [ set color orange ]
+        ]
+        ;; increment the counter for time spent in the needing signal state
+        [ set need-signal-counter need-signal-counter + 1 ]
+      ]
 
       ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ;++++++++++++++++++++++++ with counters END ++++++++++++++++++++++++++++++++++++
@@ -547,23 +567,23 @@ to update-counters
       ;-------------------------------------------------------------------------------
       ;------------------------ with timers START ------------------------------------
       ;-------------------------------------------------------------------------------
-      [
-        ;; necessarily in the needing signal state
-        ifelse (need-signal-timer = 0)
-        ;; change from needing signal to early apoptosis
-        [
-          ;; reset the needing signal state
-          set need-signal-timer need-signal-duration * 24
-          ;; setup the apoptosis state
-          set early-apoptotic? true
-          setup-apoptotic-durations
-          if (not headless-mode?) [ set color orange ]
-        ]
-        ;; decrement the timer for time spent in the needing signal state
-        [
-          set need-signal-timer need-signal-timer - 1
-        ]
-      ]
+;      [
+;        ;; necessarily in the needing signal state
+;        ifelse (need-signal-timer = 0)
+;        ;; change from needing signal to early apoptosis
+;        [
+;          ;; reset the needing signal state
+;          set need-signal-timer need-signal-duration * 24
+;          ;; setup the apoptosis state
+;          set early-apoptotic? true
+;          setup-apoptotic-durations
+;          if (not headless-mode?) [ set color orange ]
+;        ]
+;        ;; decrement the timer for time spent in the needing signal state
+;        [
+;          set need-signal-timer need-signal-timer - 1
+;        ]
+;      ]
       ;-------------------------------------------------------------------------------
       ;------------------------ with timers END --------------------------------------
       ;-------------------------------------------------------------------------------
@@ -873,7 +893,7 @@ INPUTBOX
 169
 323
 gui-blocked-apoptosis-duration
-4.0
+2.0
 1
 0
 Number
@@ -1030,7 +1050,7 @@ INPUTBOX
 330
 205
 gui-NLC-signal-strength-threshold
-0.0
+10.0
 1
 0
 Number
@@ -1041,7 +1061,7 @@ INPUTBOX
 330
 265
 gui-NLC-signal-perception-threshold
-5.0
+10.0
 1
 0
 Number
@@ -1052,7 +1072,7 @@ INPUTBOX
 330
 324
 gui-blocked-apoptosis-threshold
-10.0
+50.0
 1
 0
 Number
@@ -1075,6 +1095,7 @@ true
 PENS
 "Viability" 1.0 0 -16777216 true "" "plot \n(100 - \n( \n(count(dead-cells)/ (count(cancer-cells) + count(dead-cells))) * 100\n)\n)"
 "Survival" 1.0 0 -11221820 true "" "plot  ((count cancer-cells / nb-cancer-cells-init)) * 100"
+"Remaining Cell Ratio" 1.0 0 -2674135 true "" "plot \n(\n( \n((count(cancer-cells) + count(dead-cells)) / nb-cancer-cells-init) * 100\n)\n)"
 
 MONITOR
 85
@@ -1088,15 +1109,26 @@ Average Signal
 11
 
 MONITOR
-245
-683
-646
-728
+99
+633
+342
+678
 Avg number-of-encountered-cancer-cells
 (sum ([number-of-encountered-cancer-cells] of monocytes) )/ (count monocytes)
 17
 1
 11
+
+INPUTBOX
+169
+382
+330
+442
+gui-proliferation-time-threshold
+3.2
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
