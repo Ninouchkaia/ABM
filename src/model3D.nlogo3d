@@ -38,6 +38,7 @@ globals [
   proliferation-time-threshold
   differentiation-start
   differentiation-end
+  number-of-encountered-cancer-cells-threshold
 
   ;; outputs for headless mode
   nb-cancer-cells
@@ -160,6 +161,9 @@ to setup-globals
   set differentiation-start gui-differentiation-start
   set differentiation-end gui-differentiation-end
 
+  ;; monocytes need to have seen a certain number of cancer cells to accumulate the proper amount of signals and turn into NLCs
+  set number-of-encountered-cancer-cells-threshold gui-number-of-encountered-cancer-cells-threshold
+
 
 end
 
@@ -264,7 +268,7 @@ end
 
 to setup-apoptotic-durations
   ;; parameters of the gamma distribution
-  let mean-apo 13
+  let mean-apo 20
   let var-apo 3 * 3
   ;; total duration of the apoptotic phase
   let apoptotic-duration random-gamma (mean-apo * mean-apo / var-apo) (mean-apo / var-apo)
@@ -448,7 +452,7 @@ to-report encounted-enough-cancer-cells ;; monocyte procedure
   cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]
   in-radius 1
   set number-of-encountered-cancer-cells number-of-encountered-cancer-cells + count encountered-cancer-cells
-  report (number-of-encountered-cancer-cells > 80) ;; you can put 0 threshold not to take this effect into account
+  report (number-of-encountered-cancer-cells > number-of-encountered-cancer-cells-threshold) ;; you can put 0 threshold not to take this effect into account
 end
 
 
@@ -686,7 +690,7 @@ GRAPHICS-WINDOW
 -4
 4
 1
-0
+1
 1
 ticks
 30.0
@@ -903,7 +907,7 @@ INPUTBOX
 169
 323
 gui-blocked-apoptosis-duration
-2.0
+3.0
 1
 0
 Number
@@ -914,7 +918,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-2.0
+3.0
 1
 0
 Number
@@ -1060,7 +1064,7 @@ INPUTBOX
 330
 205
 gui-NLC-signal-strength-threshold
-10.0
+0.0
 1
 0
 Number
@@ -1071,7 +1075,7 @@ INPUTBOX
 330
 265
 gui-NLC-signal-perception-threshold
-10.0
+0.0
 1
 0
 Number
@@ -1082,7 +1086,7 @@ INPUTBOX
 330
 324
 gui-blocked-apoptosis-threshold
-10.0
+0.0
 1
 0
 Number
@@ -1135,7 +1139,7 @@ INPUTBOX
 330
 442
 gui-proliferation-time-threshold
-1.5
+2.8
 1
 0
 Number
@@ -1146,7 +1150,7 @@ INPUTBOX
 169
 502
 gui-differentiation-start
-2.5
+2.0
 1
 0
 Number
@@ -1158,6 +1162,17 @@ INPUTBOX
 502
 gui-differentiation-end
 7.0
+1
+0
+Number
+
+INPUTBOX
+203
+503
+364
+563
+gui-number-of-encountered-cancer-cells-threshold
+80.0
 1
 0
 Number
