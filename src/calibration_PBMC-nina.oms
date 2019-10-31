@@ -1,0 +1,52 @@
+import _file_.model3D_nina._
+import _file_.fitness._
+
+
+// val ifb =
+//   SLURMEnvironment(
+//     "nverstraete",
+//     "core.cluster.france-bioinformatique.fr",
+//     sharedDirectory = "/shared/projects/modellingtme",
+//     workDirectory = "/tmp/",
+//     // openMOLEMemory = 3 gigabytes,
+//     // memory = 3 gigabytes,
+//     qos = "fast"
+//   )
+
+def calib(simuDur: Int) = {
+    NSGA2Evolution(
+        evaluation = modelTask(1.0, simuDur) -- fitnessTask,
+        genome = Seq( // param a faire varier
+            //propWorldFilledInit in (75.0, 99.0),
+            //propApoptoticInit in (0.0, 10.0),
+            blockedApoptosisDuration in (1.0, 15.0),
+            needSignalDuration in (1.0, 15.0)
+            //cancerCellsPerceptionRadius in (1, 40) // serie des parametres à calibrer -- pas la peine denlever leur initialisation dans model3D.oms
+        ),
+        objectives = Seq(the_viability delta 90, remainingCellsRatio delta 50), // valeurs a la fin de l'experience D13
+        
+        //stochastic = Stochastic(seed = mySeed, reevaluate = 0.2, replications = 100), // aller voir la doc pour reevaluate et replications
+        
+        //termination = 100000, // au bout de cb de generations on arrete l'algo
+        termination = 1
+        
+        // a decommenter quand on lance sur le cluster
+        //parallelism = 100,
+        //distribution = Island(5 minutes) // optimisation pour lancement sur le cluster
+
+    )  hook (workDirectory / "calibration_PBMC_3110") // lancement local
+    // ) on ifb hook(workDirectory / "calibration_PBMC_stochastic", 500)
+}
+
+//val listExec = for {
+//  obj1 <- listGoals
+//  Seq(mono, living, total) = obj1
+//} yield calib(mono, living, total)
+
+// EmptyTask() -- (listExec)
+
+calib(13) // Mean of 4 replicates
+// calib(9, 92.0, 35.29) // Patient 1
+// calib(13, 95.24, 42.86) // Patient 2
+// calib(13, 92.98, 60.0) // Patient 3
+// calib(13, 90.0, 61.81) // Patient 4

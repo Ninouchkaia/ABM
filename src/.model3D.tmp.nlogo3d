@@ -45,12 +45,28 @@ globals [
   nb-monocytes
   nb-NLCs
   nb-dead-cells
+  ;; ajouter toutes mes valeurs des plots
+  ;; ex nbCancerCellsNeedingSignal
+  nb-cancer-cell-need-signal
+  nb-cancer-cell-early-apo
+  nb-cancer-cell-late-apo
+  nb-cancer-cell-blocked-apo
+  nb-debris
+  viability
 
   ;; lists for time series
   ts-cancer-cells
   ts-monocytes
   ts-NLCs
   ts-dead-cells
+  ;; ajouter toutes mes valeurs des plots
+  ;; ex nbCancerCellsNeedingSignal
+  ts-cancer-cell-need-signal
+  ts-cancer-cell-early-apo
+  ts-cancer-cell-late-apo
+  ts-cancer-cell-blocked-apo
+  ts-debris
+  ts-viability
 ]
 
 patches-own [
@@ -234,9 +250,9 @@ to setup-strength-function
   ;; signal-strength(tick) = slope-strength * tick + intercept-strength
   set slope-strength 100 / duration
   ;; set slope-strength 100 / (mean-f - mean-s)
-  print slope-strength
+  ;;print slope-strength
   set intercept-strength 0 - slope-strength * start-date
-  print intercept-strength
+  ;;print intercept-strength
 end
 
 to setup-cancer-cells
@@ -273,8 +289,8 @@ to setup-apoptotic-durations
   ;; total duration of the apoptotic phase
   let apoptotic-duration random-gamma (mean-apo * mean-apo / var-apo) (mean-apo / var-apo)
   ;; durations of the two parts of the apoptotic phase
-  let early-duration 0. * apoptotic-duration
-  let late-duration 0.7 * apoptotic-duration
+  let early-duration 0.6 * apoptotic-duration
+  let late-duration 0.4 * apoptotic-duration
 
   ;; relative durations in the course of the simulation
   set early-apoptotic-duration ticks + early-duration
@@ -288,6 +304,12 @@ to setup-ts
   set ts-monocytes (list (count monocytes with [signal-strength < 100]))
   set ts-NLCs (list (count monocytes with [signal-strength >= 100]))
   set ts-dead-cells (list (count dead-cells))
+  set ts-cancer-cell-need-signal (list (count cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]))
+  set ts-cancer-cell-early-apo (list(count cancer-cells with [early-apoptotic?]))
+  set ts-cancer-cell-late-apo (list(count cancer-cells with [late-apoptotic?]))
+  set ts-cancer-cell-blocked-apo (list(count cancer-cells with [blocked-apoptosis?]))
+  set ts-debris (list((count cancer-cells with [late-apoptotic?]) + count dead-cells))
+  set ts-viability ( list(100 - ( ( count(dead-cells)/ (count(cancer-cells) + count(dead-cells)) ) * 100) ) )
 end
 
 
@@ -336,7 +358,9 @@ to common-go-procedures ;; between headless and gui modes
     [ ask one-of debris [die] ]
 
     ;; move if not NLC
-    [ if (signal-strength < 100) [ move 1 nobody ] ]
+    [
+      if (signal-strength < 100) [ move 1 nobody ]
+    ]
   ]
 
   ;; update duration counters
@@ -652,6 +676,12 @@ to save-ts
   set ts-monocytes lput (count monocytes with [signal-strength < 100]) ts-monocytes
   set ts-NLCs lput (count monocytes with [signal-strength >= 100]) ts-NLCs
   set ts-dead-cells lput (count dead-cells) ts-dead-cells
+  set ts-cancer-cell-need-signal lput (count cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]) ts-cancer-cell-need-signal
+  set ts-cancer-cell-early-apo lput (count cancer-cells with [early-apoptotic?])  ts-cancer-cell-early-apo
+  set ts-cancer-cell-late-apo lput  (count cancer-cells with [late-apoptotic?])  ts-cancer-cell-late-apo
+  set ts-cancer-cell-blocked-apo lput  (count cancer-cells with [blocked-apoptosis?]) ts-cancer-cell-blocked-apo
+  set ts-debris lput ((count cancer-cells with [late-apoptotic?]) + count dead-cells)  ts-debris
+  set ts-viability lput ( 100 - ( (count(dead-cells)/ (count(cancer-cells) + count(dead-cells))) * 100)) ts-viability
 end
 
 
@@ -664,6 +694,14 @@ to outputs
   set nb-monocytes count monocytes with [signal-strength < 100]
   set nb-NLCs count monocytes with [signal-strength >= 100]
   set nb-dead-cells count dead-cells
+  set nb-cancer-cell-need-signal count cancer-cells with [not early-apoptotic? and not late-apoptotic? and not blocked-apoptosis?]
+  set ts-cancer-cell-early-apo count cancer-cells with [early-apoptotic?]
+  set ts-cancer-cell-late-apo count cancer-cells with [late-apoptotic?]
+  set ts-cancer-cell-blocked-apo count cancer-cells with [blocked-apoptosis?]
+  set ts-debris (count cancer-cells with [late-apoptotic?]) + count dead-cells
+
+
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -896,7 +934,7 @@ INPUTBOX
 169
 264
 gui-prop-apoptotic-init
-8.0
+1.0
 1
 0
 Number
@@ -907,7 +945,7 @@ INPUTBOX
 169
 323
 gui-blocked-apoptosis-duration
-3.0
+2.0
 1
 0
 Number
@@ -918,7 +956,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-3.0
+1.5
 1
 0
 Number
@@ -1139,7 +1177,7 @@ INPUTBOX
 330
 442
 gui-proliferation-time-threshold
-2.8
+15.0
 1
 0
 Number
@@ -1150,7 +1188,7 @@ INPUTBOX
 169
 502
 gui-differentiation-start
-2.0
+2.5
 1
 0
 Number
@@ -1172,7 +1210,7 @@ INPUTBOX
 364
 563
 gui-number-of-encountered-cancer-cells-threshold
-80.0
+0.0
 1
 0
 Number

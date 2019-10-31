@@ -1,0 +1,106 @@
+// Inputs
+val mySeed = Val[Int]
+val simulationDuration = Val[Int]
+val zMax = Val[Int]
+val coef = Val[Int]
+val propWorldFilledInit = Val[Double]
+val nbCancerCellsInit = Val[Int]
+val propMonocytesInit = Val[Double]
+val propApoptoticInit = Val[Double]
+val blockedApoptosisDuration = Val[Double]
+val needSignalDuration = Val[Double]
+val cancerCellsPerceptionRadius = Val[Int]
+val nlcSignalStrengthThreshold = Val[Double]
+val nlcSignalPerceptionThreshold = Val[Double]
+val blockedApoptosisThreshold = Val[Double]
+val proliferationTimeThreshold = Val[Double]
+val differentiationStart = Val[Double]
+val differentiationEnd = Val[Double]
+val numberOfEncounteredCancerCellsThreshold = Val[Double]
+
+// Outputs
+val nbCancerCells = Val[Double]
+val nbMonocytes = Val[Double]
+val nbNLCs = Val[Double]
+val nbDeadCells = Val[Double]
+val nbCancerCellsNeedingSignal = Val[Double]
+val viability = Val[Double]
+
+val launch = List(
+    //"if (need-signal-duration < blocked-apoptosis-duration) [ headless-setup ]",
+    "headless-setup",
+    "while [ count cancer-cells > 0 and ticks < simulation-duration * 24 ] [ headless-go ]",
+    "outputs")
+            
+def modelTask(monoInit: Double, simuDur: Int) =
+//val modelTask =
+    NetLogo6Task(workDirectory / "model3D-nina-new.nlogo3d", launch, embedWorkspace = false, seed = mySeed, switch3d = true) set(
+        (inputs, outputs) += mySeed,
+        inputs += simulationDuration mapped "simulation-duration",
+        inputs += zMax mapped "z-max",
+        inputs += coef mapped "coef",
+        inputs += nbCancerCellsInit mapped "nb-cancer-cells-init",
+        inputs += propMonocytesInit mapped "prop-monocytes-init",
+        inputs += propWorldFilledInit mapped "prop-world-filled-init",
+        inputs += propApoptoticInit mapped "prop-apoptotic-init",
+        inputs += blockedApoptosisDuration mapped "blocked-apoptosis-duration",
+        inputs += needSignalDuration mapped "need-signal-duration",
+        inputs += cancerCellsPerceptionRadius mapped "cancer-cells-perception-radius",
+        inputs += nlcSignalStrengthThreshold mapped "NLC-signal-strength-threshold",
+        inputs += nlcSignalPerceptionThreshold mapped "NLC-signal-perception-threshold",
+        inputs += blockedApoptosisThreshold mapped "blocked-apoptosis-threshold",
+        inputs += proliferationTimeThreshold mapped "proliferation-time-threshold",
+        inputs += differentiationStart mapped "differentiation-start",
+        inputs += differentiationEnd mapped "differentiation-end",
+        inputs += numberOfEncounteredCancerCellsThreshold mapped "number-of-encountered-cancer-cells-threshold",
+  
+  
+        outputs += nbCancerCellsInit,
+        outputs += propMonocytesInit,
+        outputs += blockedApoptosisDuration,
+        outputs += needSignalDuration,
+        outputs += cancerCellsPerceptionRadius,
+        outputs += nlcSignalStrengthThreshold,
+        outputs += nlcSignalPerceptionThreshold,
+        outputs += blockedApoptosisThreshold,
+        outputs += proliferationTimeThreshold,
+        outputs += differentiationStart,
+        outputs += differentiationEnd,
+        outputs += numberOfEncounteredCancerCellsThreshold,
+        outputs += nbCancerCells mapped "nb-cancer-cells",
+        outputs += nbMonocytes mapped "nb-monocytes",
+        outputs += nbNLCs mapped "nb-NLCs",
+        outputs += nbDeadCells mapped "nb-dead-cells",
+        outputs += nbCancerCellsNeedingSignal mapped "nb-cancer-cell-need-signal",
+        outputs += viability mapped "viability",
+  
+        //Default values. Can be removed if OpenMOLE Vals are set by values coming from the workflow
+     mySeed := 12,
+        simulationDuration := simuDur,
+        zMax := 1,
+        coef := 4,
+        nbCancerCellsInit := 2500,
+        propMonocytesInit := monoInit,
+        propWorldFilledInit := 85.5,
+        propApoptoticInit := 8,
+        blockedApoptosisDuration := 1,
+        needSignalDuration := 2,
+        cancerCellsPerceptionRadius := 4,
+        nlcSignalStrengthThreshold := 0,
+        nlcSignalPerceptionThreshold := 0,
+        blockedApoptosisThreshold  := 0,
+        proliferationTimeThreshold := 15,
+        differentiationStart := 2.5,
+        differentiationEnd := 7,
+        numberOfEncounteredCancerCellsThreshold := 0
+        
+    )
+
+modelTask(1.0, 13) hook display
+// modelTask on ifb hook(workDirectory / "test.csv")
+
+// Replication(
+//   evaluation = modelTask(1.0, 13),
+//   seed = mySeed,
+//   replications = 100
+// ) hook (workDirectory / "test_seed.csv", includeSeed = true)

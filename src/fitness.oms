@@ -1,0 +1,68 @@
+import _file_.model3D._
+
+val the_viability = Val[Double]
+val remainingCellsRatio = Val[Double]
+
+// Heterologous cultures
+// val listGoals = List(
+//     //Seq(20.0, 99.2, 30.4),
+//     Seq(10.0, 98.3, 34.7),
+//     Seq(7.5, 97.0, 44.0),
+//     Seq(5.0, 95.7, 38.6),
+//     Seq(2.5, 88.5, 44.7),
+//     Seq(1.25, 80.2, 63.2),
+//     Seq(0.63, 69.8, 81.9),
+//     Seq(0.31, 56.8, 92.5),
+//     Seq(0.16, 44.5, 95.9),
+//     Seq(0.08, 47.2, 94.7),
+//     Seq(0.04, 43.0, 100.0),
+//     Seq(0.02, 31.5, 100.0),
+//     Seq(0.01, 15.6, 90.0),
+//     Seq(0.0, 33.5, 100.0)
+// )
+
+//def fitnessTask(livingEnd: Double, totalEnd: Double) =
+val fitnessTask = ScalaTask("""
+    val nbLivingCells = nbCancerCells + nbNLCs
+    val nbTotalCells = nbLivingCells + nbDeadCells
+    val nbTotalCellsInit = nbCancerCellsInit * (1 + propMonocytesInit/100)
+    
+    val the_viability = nbLivingCells / nbTotalCells * 100
+    val remainingCellsRatio = nbTotalCells / nbTotalCellsInit * 100
+    
+    //val objLiving = math.abs(propLivingCells - living)
+    //val objTotal = math.abs(propTotalCells - total)
+""") set (
+    //inputs += (living, total),
+    inputs += (nbCancerCellsInit, propMonocytesInit),
+    inputs += (nbCancerCells, nbNLCs, nbDeadCells),
+    //outputs += (objLiving, objTotal),
+    outputs += (nbCancerCellsInit),
+    outputs += (the_viability, remainingCellsRatio)
+    
+    //living := livingEnd,
+    //total := totalEnd
+)
+
+// val ifb = SLURMEnvironment(
+//   "harduin",
+//   "core.cluster.france-bioinformatique.fr",
+//   sharedDirectory = "/shared/projects/modellingtme",
+//   workDirectory = "/tmp/"
+//   // openMOLEMemory = 3 gigabytes,
+//   // memory = 3 gigabytes,
+// //   qos = "fast"
+// )
+
+// val replicationTask = Replication(
+//   evaluation = modelTask(1.0, 13) -- fitnessTask,
+//   seed = mySeed,
+//   replications = 10
+// ) hook (workDirectory / "test_popInit.csv", includeSeed = true)
+
+// // replicationTask
+
+// DirectSampling(
+//   evaluation = replicationTask,
+//   sampling = (nbCancerCellsInit in (10000 to 100000 by 10000))
+// ) on ifb by 100
