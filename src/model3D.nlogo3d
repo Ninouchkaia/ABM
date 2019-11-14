@@ -269,7 +269,11 @@ to setup-cancer-cells
     set late-apoptotic? false
     set late-apoptotic-duration -1
     set surrounding-cells-counter 0
-    if (not headless-mode?) [ set color red ]
+    if (not headless-mode?) [
+      set color red
+      set shape "dot"
+      set size 4
+    ]
   ]
 
   ;; set some of the cancer cells to the early apoptosis phase
@@ -278,7 +282,10 @@ to setup-cancer-cells
     set need-signal-timer -1
     set early-apoptotic? true
     setup-apoptotic-durations
-    if (not headless-mode?) [ set color orange ]
+    if (not headless-mode?) [
+      set color orange
+      set shape "dot"
+    ]
   ]
 end
 
@@ -494,7 +501,10 @@ to update-counters
       [
 
         set breed dead-cells
-        if (not headless-mode?) [ set color grey ]
+        if (not headless-mode?) [
+          set color grey
+          set shape "dot"
+        ]
       ]
       ;; change from early apoptosis to late apoptosis
       [
@@ -706,8 +716,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-733
-734
+933
+934
 -1
 -1
 5.0
@@ -720,10 +730,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
+-92
+92
+-92
+92
 -4
 4
 1
@@ -755,7 +765,7 @@ INPUTBOX
 169
 146
 gui-nb-cancer-cells-init
-2500.0
+4000.0
 1
 0
 Number
@@ -922,7 +932,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-1.0
+0.5
 1
 0
 Number
@@ -944,7 +954,7 @@ INPUTBOX
 169
 323
 gui-blocked-apoptosis-duration
-2.0
+2.5
 1
 0
 Number
@@ -955,7 +965,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-1.5
+2.0
 1
 0
 Number
@@ -963,7 +973,7 @@ Number
 INPUTBOX
 168
 322
-329
+355
 382
 gui-cancer-cells-perception-radius
 4.0
@@ -1098,7 +1108,7 @@ apoptotic-duration
 INPUTBOX
 169
 145
-330
+358
 205
 gui-NLC-signal-strength-threshold
 0.0
@@ -1109,7 +1119,7 @@ Number
 INPUTBOX
 169
 205
-330
+359
 265
 gui-NLC-signal-perception-threshold
 0.0
@@ -1176,7 +1186,7 @@ INPUTBOX
 330
 442
 gui-proliferation-time-threshold
-15.0
+2.4
 1
 0
 Number
@@ -1206,7 +1216,7 @@ Number
 INPUTBOX
 203
 503
-364
+473
 563
 gui-number-of-encountered-cancer-cells-threshold
 0.0
