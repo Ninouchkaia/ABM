@@ -82,6 +82,7 @@ monocytes-own [
   monocyte-signal-value
   number-of-encountered-cancer-cells
   timer-meet-cancer-cells
+  phagocytosis-strength
 ]
 
 cancer-cells-own [
@@ -271,8 +272,8 @@ to setup-cancer-cells
     set surrounding-cells-counter 0
     if (not headless-mode?) [
       set color red
-      set shape "dot"
-      set size 4
+      set shape "default"
+      set size 1
     ]
   ]
 
@@ -284,7 +285,7 @@ to setup-cancer-cells
     setup-apoptotic-durations
     if (not headless-mode?) [
       set color orange
-      set shape "dot"
+      set shape "default"
     ]
   ]
 end
@@ -362,11 +363,19 @@ to common-go-procedures ;; between headless and gui modes
     let debris (turtle-set (dead-cells-on neighbors) ([cancer-cells with [late-apoptotic?]] of neighbors))
     ifelse (any? debris)
     ;; phagocyte
-    [ ask one-of debris [die] ]
+    ;;[ ask one-of debris [die] ]
+    [
+      let phagocytosis phagocytosis-value
+      let maxPhagocytosis min list phagocytosis count debris
+      ask n-of maxPhagocytosis debris [die]
+    ]
 
     ;; move if not NLC
     [
-      if (signal-strength < 100) [ move 1 nobody ]
+      ifelse (signal-strength < 100)
+      [ move 1 nobody ]
+      [ if (random 100 < 50) [ move 1 nobody ]]
+
     ]
   ]
 
@@ -486,6 +495,27 @@ to-report encounted-enough-cancer-cells ;; monocyte procedure
   report (number-of-encountered-cancer-cells > number-of-encountered-cancer-cells-threshold) ;; you can put 0 threshold not to take this effect into account
 end
 
+to-report phagocytosis-value ;; monocyte procedure
+
+  if (signal-strength < 0) ;; monocytes did not start differentiating
+  [
+    set phagocytosis-strength 2
+  ]
+  if (signal-strength >= 0 and signal-strength < 50) ;; monocytes start differentiating and will reach their maximum phagocytosis ability halfway through differentiation
+  ;; phagocytosis value goes from 1 to 5, then 0.5
+  [
+    set phagocytosis-strength ( (signal-strength / (50 - 0)) * (4 - 2) )
+  ]
+  if (signal-strength > 50 and signal-strength < 100)
+  [
+    set phagocytosis-strength ( (1 - ((signal-strength - 50) / (100 - 50))) * ( - 1) + 1 )
+  ]
+  if (signal-strength >= 100)
+  [
+    set phagocytosis-strength 1
+  ]
+  report phagocytosis-strength
+end
 
 to update-counters
 
@@ -503,7 +533,7 @@ to update-counters
         set breed dead-cells
         if (not headless-mode?) [
           set color grey
-          set shape "dot"
+          set shape "default"
         ]
       ]
       ;; change from early apoptosis to late apoptosis
@@ -932,7 +962,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-0.5
+1.0
 1
 0
 Number
@@ -943,7 +973,7 @@ INPUTBOX
 169
 264
 gui-prop-apoptotic-init
-1.0
+6.0
 1
 0
 Number
@@ -954,7 +984,7 @@ INPUTBOX
 169
 323
 gui-blocked-apoptosis-duration
-2.5
+2.0
 1
 0
 Number
@@ -965,7 +995,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-2.0
+2.5
 1
 0
 Number
@@ -973,7 +1003,7 @@ Number
 INPUTBOX
 168
 322
-329
+355
 382
 gui-cancer-cells-perception-radius
 4.0
@@ -1119,7 +1149,7 @@ Number
 INPUTBOX
 169
 205
-330
+359
 265
 gui-NLC-signal-perception-threshold
 0.0
@@ -1214,9 +1244,9 @@ gui-differentiation-end
 Number
 
 INPUTBOX
-203
+84
 503
-364
+354
 563
 gui-number-of-encountered-cancer-cells-threshold
 0.0
