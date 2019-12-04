@@ -1244,15 +1244,26 @@ gui-differentiation-end
 Number
 
 INPUTBOX
-84
-503
-354
-563
+85
+501
+355
+561
 gui-number-of-encountered-cancer-cells-threshold
 0.0
 1
 0
 Number
+
+MONITOR
+178
+805
+335
+850
+average phagocytosis
+(sum ([phagocytosis-strength] of monocytes) )/ (count monocytes)
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
