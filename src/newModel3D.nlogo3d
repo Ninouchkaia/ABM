@@ -6,10 +6,9 @@
 ;;;;;;;;;;;;;;;;;;
 
 breed [ monocytes monocyte ]
+breed [ nurse-like-cells nurse-like-cell ]
 breed [ cancer-cells cancer-cell ]
 breed [ dead-cells dead-cell ]
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;;;; VARIABLES ;;;;;
@@ -39,7 +38,7 @@ globals [
   differentiation-start
   differentiation-end
   number-of-encountered-cancer-cells-threshold
-
+  BCR-functional
 
   ;; outputs for headless mode
   nb-cancer-cells
@@ -72,6 +71,7 @@ globals [
 
 patches-own [
   forbidden ;; manual fix to prevent auto-wrapping
+  chemical             ;; amount of chemical on this patch
 ]
 
 monocytes-own [
@@ -82,8 +82,8 @@ monocytes-own [
   ;; define the signal value depending on surrounding cancer cells
   monocyte-signal-value
   number-of-encountered-cancer-cells
-  timer-meet-cancer-cells
   phagocytosis-strength
+  timer-meet-cancer-cells
 ]
 
 cancer-cells-own [
@@ -106,7 +106,11 @@ cancer-cells-own [
   BCR-functional?
 ]
 
-
+nurse-like-cells-own [
+  signal-strength
+  timer-meet-cancer-cells
+  phagocytosis-strength
+]
 
 ;;;;;;;;;;;;;;;;;
 ;;;;; SETUP ;;;;;
@@ -115,7 +119,6 @@ cancer-cells-own [
 to setup
   clear-all
   reset-ticks
-
 
   set headless-mode? false
 
@@ -131,6 +134,7 @@ to setup
     setup-world
     setup-monocytes
     setup-cancer-cells
+
   ;]
 
   ;; initialize the video of the simulation run
@@ -138,7 +142,6 @@ to setup
 ;  vid:start-recorder
 ;  vid:record-interface
 end
-
 
 to headless-setup
   reset-ticks
@@ -153,7 +156,6 @@ to headless-setup
   ;; initialize time series
   setup-ts
 end
-
 
 to setup-globals
   set prop-world-filled-init gui-prop-world-filled-init
@@ -189,7 +191,6 @@ to setup-globals
 
 end
 
-
 to setup-world
   ;; get initial number of cells
   set nb-monocytes-init ceiling (prop-monocytes-init * nb-cancer-cells-init / 100)
@@ -207,15 +208,25 @@ to setup-world
   ;; close the world
   ;; only not forbidden patches are accessible to the agents
   ask patches [
+
     ifelse ((pxcor * pxcor + pycor * pycor) > (world-radius * world-radius) or abs pzcor > z-max)
     [ set forbidden true ]
-    [ set forbidden false ]
+    [
+      set forbidden false
+      set chemical 0
+      recolor-patch
+    ]
   ]
 
   ;; create cells
   ask n-of nb-cells-init (patches with [not forbidden]) [ sprout-cancer-cells 1 ]
 end
 
+to recolor-patch  ;; patch procedure
+  ;; give color to chemical sources
+  ;; scale color to show chemical concentration
+  if (not forbidden and chemical > 0) [set pcolor scale-color green chemical 0 20]
+end
 
 to setup-monocytes
   ;; create monocytes
@@ -310,7 +321,6 @@ to setup-apoptotic-durations
   set late-apoptotic-duration early-apoptotic-duration + late-duration
 end
 
-
 to setup-ts
   ;; update time series
   set ts-cancer-cells (list (count cancer-cells))
@@ -325,8 +335,6 @@ to setup-ts
   set ts-viability ( list(100 - ( ( count(dead-cells)/ (count(cancer-cells) + count(dead-cells)) ) * 100) ) )
 end
 
-
-
 ;;;;;;;;;;;;;;
 ;;;;; GO ;;;;;
 ;;;;;;;;;;;;;;
@@ -339,6 +347,17 @@ to go
     ;; record the state of the world
     ;vid:record-view
     ;; increment the time step
+
+
+    diffuse chemical (diffusion-rate / 100)
+
+    ;; patches actions
+    ask patches
+    [
+      set chemical chemical * (100 - evaporation-rate) / 100  ;; slowly evaporate chemical
+      recolor-patch
+    ]
+
     tick
   ]
   [ stop ]
@@ -352,18 +371,34 @@ to headless-go
   tick
 end
 
-to common-go-procedures ;; between headless and gui modes
-  ;; cancer cells actions
+to common-go-procedures ;; between headless and gui modes ;; forever button
+    ;; cancer cells actions
   ask cancer-cells [
     ifelse (blocked-apoptosis?)
     [ move 6 nobody ]
-    [
-      look-for-NLC
-    ]
+    [ look-for-NLC ] ;; look-for-NLC was used when chemical gradient was not implemented yet
+    ;;[ move-towards-chemical ]
   ]
 
   ;; monocytes actions
   ask monocytes [
+    ;; drop some chemical
+    set chemical chemical + signal-strength  ;; drop some chemical
+    phagocyte
+  ]
+
+  ;; NLCs actions
+  ask nurse-like-cells [
+    ;; drop some chemical
+    set chemical chemical + signal-strength  ;; drop some chemical
+    phagocyte
+  ]
+
+  ;; update duration counters
+  update-counters
+end
+
+to phagocyte ;; monocyte and NLC procedure
     ;; look for dead or late apoptotic cells in the neighbors
     let debris (turtle-set (dead-cells-on neighbors) ([cancer-cells with [late-apoptotic?]] of neighbors))
     ifelse (any? debris)
@@ -374,20 +409,13 @@ to common-go-procedures ;; between headless and gui modes
       let maxPhagocytosis min list phagocytosis count debris
       ask n-of maxPhagocytosis debris [die]
     ]
-
-    ;; move if not NLC
+  ;; move if not NLC
     [
       ifelse (signal-strength < 100)
       [ move 1 nobody ]
       [ if (random 100 < 50) [ move 1 nobody ]]
-
     ]
-  ]
-
-  ;; update duration counters
-  update-counters
 end
-
 
 to move [steps goal] ;; agent procedure
   ifelse (goal != nobody)
@@ -428,7 +456,6 @@ to move [steps goal] ;; agent procedure
   ]
 end
 
-
 to look-for-NLC ;; cancer cell procedure
   ;; is the cancer cell next to an NLC
   let neighboring-monocytes monocytes-on neighbors
@@ -437,7 +464,7 @@ to look-for-NLC ;; cancer cell procedure
   )
   [
     ;; check if BCR signalling is functional
-    if (BCR-functional == 1)
+    if (BCR-functional = 1)
     [
        ;; check if the cancer cell has accumulated enough anti-apoptotic signals to enter blocked apoptosis
        ifelse (sum-anti-apoptotic-signals > blocked-apoptosis-threshold)
@@ -476,6 +503,23 @@ to look-for-NLC ;; cancer cell procedure
   ]
 end
 
+to move-towards-chemical ;; cancer cell procedure
+  ;; sniff left and right, and go where the strongest smell is
+  let scent-ahead chemical-scent-at-angle   0
+  let scent-right chemical-scent-at-angle  45
+  let scent-left  chemical-scent-at-angle -45
+  if (scent-right > scent-ahead) or (scent-left > scent-ahead)
+  [ ifelse scent-right > scent-left
+    [ rt 45 ]
+    [ lt 45 ] ]
+end
+
+to-report chemical-scent-at-angle [angle] ;; cancer cell procedure
+  let p patch-right-and-ahead angle 1
+  if p = nobody [ report 0 ]
+  report [chemical] of p
+end
+
 to enter-blocked-apoptosis ;; cancer cell procedure
   ;; effects of the apoptosis-blocking signal
   ;; NINA: id put the if condition upstream when get-signal is called
@@ -504,7 +548,7 @@ to-report encounted-enough-cancer-cells ;; monocyte procedure
   report (number-of-encountered-cancer-cells > number-of-encountered-cancer-cells-threshold) ;; you can put 0 threshold not to take this effect into account
 end
 
-to-report phagocytosis-value ;; monocyte procedure
+to-report phagocytosis-value ;; monocyte/NLC procedure
 
   if (signal-strength < 0) ;; monocytes did not start differentiating
   [
@@ -548,7 +592,6 @@ to update-counters
       ;; change from early apoptosis to late apoptosis
       [
         if (ticks > early-apoptotic-duration) [
-
           set early-apoptotic? false
           set late-apoptotic? true
           if (not headless-mode?) [ set color yellow ]
@@ -561,10 +604,6 @@ to update-counters
       ifelse (blocked-apoptosis?);; pink ?
       ;; blocked apoptosis state
       [
-
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ;++++++++++++++++++++++++ with counters START ++++++++++++++++++++++++++++++++++
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         ifelse (blocked-apoptosis-counter >= blocked-apoptosis-duration * 24)
         ;; change from blocked apoptosis to needing signal
@@ -592,44 +631,9 @@ to update-counters
           ;; increment the counter for time spent in the blocked apoptosis state
           set blocked-apoptosis-counter blocked-apoptosis-counter + 1
         ]
-
-
-
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ;++++++++++++++++++++++++ with counters END ++++++++++++++++++++++++++++++++++++
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-      ;-------------------------------------------------------------------------------
-      ;------------------------ with timers START ------------------------------------
-      ;-------------------------------------------------------------------------------
-
-;        ifelse (blocked-apoptosis-timer = 0)
-;        ;; change from blocked apoptosis to needing signal
-;        [
-;          ;; reset the blocked apoptosis state
-;          set blocked-apoptosis? false
-;          set blocked-apoptosis-timer blocked-apoptosis-duration * 24
-;          ;; start the timer for time spent in the needing signal state
-;          set need-signal-timer need-signal-duration * 24
-;          ;; reset accumulated anti-apoptotic signals to 0
-;          set sum-anti-apoptotic-signals 0
-;          if (not headless-mode?) [ set color red ]
-;        ]
-;        ;; decrement the timer for time spent in the blocked apoptosis state
-;        [set blocked-apoptosis-timer blocked-apoptosis-timer - 1]
-;
-      ;-------------------------------------------------------------------------------
-      ;------------------------ with timers END --------------------------------------
-      ;-------------------------------------------------------------------------------
       ]
 
       ;; not blocked-apoptosis
-
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ;++++++++++++++++++++++++ with counters START ++++++++++++++++++++++++++++++++++
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
       [
         ;; necessarily in the needing signal state
         ifelse (need-signal-counter >= need-signal-duration * 24)
@@ -645,40 +649,12 @@ to update-counters
         ;; increment the counter for time spent in the needing signal state
         [ set need-signal-counter need-signal-counter + 1 ]
       ]
-
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ;++++++++++++++++++++++++ with counters END ++++++++++++++++++++++++++++++++++++
-      ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-      ;-------------------------------------------------------------------------------
-      ;------------------------ with timers START ------------------------------------
-      ;-------------------------------------------------------------------------------
-;      [
-;        ;; necessarily in the needing signal state
-;        ifelse (need-signal-timer = 0)
-;        ;; change from needing signal to early apoptosis
-;        [
-;          ;; reset the needing signal state
-;          set need-signal-timer need-signal-duration * 24
-;          ;; setup the apoptosis state
-;          set early-apoptotic? true
-;          setup-apoptotic-durations
-;          if (not headless-mode?) [ set color orange ]
-;        ]
-;        ;; decrement the timer for time spent in the needing signal state
-;        [
-;          set need-signal-timer need-signal-timer - 1
-;        ]
-;      ]
-      ;-------------------------------------------------------------------------------
-      ;------------------------ with timers END --------------------------------------
-      ;-------------------------------------------------------------------------------
-
     ]
   ]
 
   ;; monocytes
   ask monocytes [
+    let monocyte-signal-strength signal-strength
     ifelse (signal-strength < 100)
     ;; increase the signal strength and signal value
     [
@@ -712,12 +688,15 @@ to update-counters
     ]
     [
       ;; change from monocytes to NLC state
-      set timer-meet-cancer-cells -1
-      if (not headless-mode?) [ set color green ]
+        set breed nurse-like-cells
+        set shape "square"
+        set signal-strength monocyte-signal-strength
+        set phagocytosis-strength phagocytosis-value
+        set timer-meet-cancer-cells -1
+        if (not headless-mode?) [set color green]
     ]
   ]
 end
-
 
 to save-ts
   ;; save time series of cell counts
@@ -732,7 +711,6 @@ to save-ts
   set ts-debris lput ((count cancer-cells with [late-apoptotic?]) + count dead-cells)  ts-debris
   set ts-viability lput ( 100 - ( (count(dead-cells)/ (count(cancer-cells) + count(dead-cells))) * 100)) ts-viability
 end
-
 
 to outputs
   ;; save the video recording
@@ -755,8 +733,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-933
-934
+653
+654
 -1
 -1
 5.0
@@ -769,10 +747,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--92
-92
--92
-92
+-64
+64
+-64
+64
 -4
 4
 1
@@ -804,7 +782,7 @@ INPUTBOX
 169
 146
 gui-nb-cancer-cells-init
-4000.0
+2000.0
 1
 0
 Number
@@ -1004,7 +982,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-1.85
+5.0
 1
 0
 Number
@@ -1075,8 +1053,8 @@ true
 true
 "" ""
 PENS
-"monocytes" 1.0 0 -13345367 true "" "plot count monocytes with [signal-strength < 100]"
-"NLCs" 1.0 0 -10899396 true "" "plot count monocytes with [signal-strength >= 100]"
+"monocytes" 1.0 0 -13345367 true "" "plot count monocytes"
+"NLCs" 1.0 0 -10899396 true "" "plot count nurse-like-cells"
 
 MONITOR
 91
@@ -1328,6 +1306,47 @@ gui-BCR-functional
 1
 0
 Number
+
+SLIDER
+266
+557
+438
+590
+diffusion-rate
+diffusion-rate
+0
+100
+4.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+361
+606
+533
+639
+evaporation-rate
+evaporation-rate
+0
+100
+6.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+203
+783
+421
+828
+average chemical on allowed patches
+(sum ([chemical] of patches with [not forbidden]) )/ (count patches with [not forbidden])
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
