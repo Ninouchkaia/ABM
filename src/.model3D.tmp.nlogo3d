@@ -39,7 +39,7 @@ globals [
   differentiation-start
   differentiation-end
   number-of-encountered-cancer-cells-threshold
-  BCR-functional
+
 
   ;; outputs for headless mode
   nb-cancer-cells
@@ -437,7 +437,7 @@ to look-for-NLC ;; cancer cell procedure
   )
   [
     ;; check if BCR signalling is functional
-    if (BCR-functional = 1)
+    if (BCR-functional == 1)
     [
        ;; check if the cancer cell has accumulated enough anti-apoptotic signals to enter blocked apoptosis
        ifelse (sum-anti-apoptotic-signals > blocked-apoptosis-threshold)
@@ -755,8 +755,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-733
-734
+933
+934
 -1
 -1
 5.0
@@ -769,10 +769,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
+-92
+92
+-92
+92
 -4
 4
 1
@@ -804,7 +804,7 @@ INPUTBOX
 169
 146
 gui-nb-cancer-cells-init
-2500.0
+4000.0
 1
 0
 Number
@@ -1004,7 +1004,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-5.0
+1.85
 1
 0
 Number
@@ -1324,7 +1324,7 @@ INPUTBOX
 498
 106
 gui-BCR-functional
-0.0
+1.0
 1
 0
 Number
