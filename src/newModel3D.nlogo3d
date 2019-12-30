@@ -198,7 +198,8 @@ to setup-world
 
   ;; resize the simulation world
   if (not headless-mode?) [
-    set z-max 1
+    ;;set z-max 1
+    set z-max 0
     set coef 4
   ]
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
@@ -225,7 +226,7 @@ end
 to recolor-patch  ;; patch procedure
   ;; give color to chemical sources
   ;; scale color to show chemical concentration
-  if (not forbidden and chemical > 0) [set pcolor scale-color green chemical 0 20]
+  if (not forbidden and chemical > 0) [set pcolor scale-color green chemical 0 50]
 end
 
 to setup-monocytes
@@ -376,21 +377,21 @@ to common-go-procedures ;; between headless and gui modes ;; forever button
   ask cancer-cells [
     ifelse (blocked-apoptosis?)
     [ move 6 nobody ]
-    [ look-for-NLC ] ;; look-for-NLC was used when chemical gradient was not implemented yet
-    ;;[ move-towards-chemical ]
+    ;;[ look-for-NLC ] ;; look-for-NLC was used when chemical gradient was not implemented yet
+    [ look-for-chemical ]
   ]
 
   ;; monocytes actions
   ask monocytes [
     ;; drop some chemical
-    set chemical chemical + signal-strength  ;; drop some chemical
+    if (signal-strength > 0) [set chemical chemical + signal-strength]  ;; drop some chemical
     phagocyte
   ]
 
   ;; NLCs actions
   ask nurse-like-cells [
     ;; drop some chemical
-    set chemical chemical + signal-strength  ;; drop some chemical
+    set chemical chemical + signal-strength   ;; drop some chemical
     phagocyte
   ]
 
@@ -503,16 +504,27 @@ to look-for-NLC ;; cancer cell procedure
   ]
 end
 
-to move-towards-chemical ;; cancer cell procedure
-  ;; sniff left and right, and go where the strongest smell is
-  let scent-ahead chemical-scent-at-angle   0
-  let scent-right chemical-scent-at-angle  45
-  let scent-left  chemical-scent-at-angle -45
-  if (scent-right > scent-ahead) or (scent-left > scent-ahead)
-  [ ifelse scent-right > scent-left
-    [ rt 45 ]
-    [ lt 45 ] ]
+to look-for-chemical ;; cancer cell procedure
+  ;; is the cancer cell next to an NLC
+  let neighboring-patches-with-chemical patches-on neighbors with [chemical > 0]
+  if (any? neighboring-patches-with-chemical)
+  [
+     ;; check if the cancer cell has accumulated enough anti-apoptotic signals to enter blocked apoptosis
+     ifelse (sum-anti-apoptotic-signals > blocked-apoptosis-threshold)
+     [
+       ;; enter blocked apoptosis
+       enter-blocked-apoptosis
+     ]
+     [
+       set sum-anti-apoptotic-signals sum-anti-apoptotic-signals + chemical / 50 ;; il faudra changer ça !
+       set chemical chemical - chemical / 50
+       if (chemical < 0.5) [move-towards-chemical]
+     ]
+  ]
+  ;; else
+  [move 6 nobody]
 end
+
 
 to-report chemical-scent-at-angle [angle] ;; cancer cell procedure
   let p patch-right-and-ahead angle 1
@@ -733,8 +745,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-653
-654
+1133
+1134
 -1
 -1
 5.0
@@ -747,12 +759,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--64
-64
--64
-64
--4
-4
+-112
+112
+-112
+112
+0
+0
 1
 1
 1
@@ -982,7 +994,7 @@ INPUTBOX
 169
 382
 gui-need-signal-duration
-5.0
+4.0
 1
 0
 Number
@@ -1150,7 +1162,7 @@ INPUTBOX
 330
 324
 gui-blocked-apoptosis-threshold
-0.0
+10.0
 1
 0
 Number
@@ -1203,7 +1215,7 @@ INPUTBOX
 330
 442
 gui-proliferation-time-threshold
-2.1
+2.5
 1
 0
 Number
@@ -1316,7 +1328,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-4.0
+23.0
 1
 1
 NIL
@@ -1331,17 +1343,17 @@ evaporation-rate
 evaporation-rate
 0
 100
-6.0
+17.0
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-203
-783
-421
-828
+163
+758
+381
+803
 average chemical on allowed patches
 (sum ([chemical] of patches with [not forbidden]) )/ (count patches with [not forbidden])
 17
