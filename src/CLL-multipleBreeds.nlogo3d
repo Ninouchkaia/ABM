@@ -126,7 +126,7 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max 1
+  set z-max 0
   set coef 4
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
@@ -151,7 +151,7 @@ end
 to recolor-patch  ;; patch procedure
   ;; give color to chemical sources
   ;; scale color to show chemical concentration
-  set pcolor scale-color green Chemical_A 0 200
+  set pcolor scale-color green Chemical_A -20 200
   ;;set pcolor scale-color red Chemical_B -20 200
 end
 
@@ -239,16 +239,22 @@ to move [steps goal] ;; agent procedure
 end
 
 to move-to-chemical ;; cancer cell procedure
-  let possible-positions neighbors with [not forbidden and not any? turtles-here and Chemical_A > 0]
-  if (any? possible-positions)
+  let current-distance distance max_Chemical_A
+  let closer-positions neighbors with [not forbidden and
+                                           not any? turtles-here and
+                                           distance max_Chemical_A <= current-distance and
+                                           distance max_Chemical_A > 1]
+  ;;let possible-positions neighbors with [not forbidden and not any? turtles-here and Chemical_A > 0]
+  ifelse (any? closer-positions)
   [ move-to max_Chemical_A ]
- ;; [ move 6 nobody ]
+  [ move 6 nobody ]
 
 end
 
 to-report max_Chemical_A ;; cancer cell procedure
   ;; sniff around, and report where the strongest smell is
-  let max-chemical-patches neighbors with-max [Chemical_A]
+  let possible-patches neighbors with [not forbidden and not any? turtles-here]
+  let max-chemical-patches possible-patches with-max [Chemical_A]
   ifelse (any? max-chemical-patches)
   [report one-of max-chemical-patches]
   [report one-of neighbors]
@@ -302,8 +308,8 @@ to update-positions
   [ move-to-chemical ]
 
   ;; LateApoCancerCells actions
-  ;;ask LateApoCancerCells
-  ;;[ move-to-chemical ]
+  ask LateApoCancerCells
+  [ move-to-chemical ]
 
   ;; Monocytes actions
   ask Monocytes
@@ -353,7 +359,7 @@ to update-chemicals
   ask EarlyApoCancerCells
   [
     set Chemical_N Chemical_N + 1 ;; accumulate some Chemical_N
-    set Chemical_S Chemical_S + Chemical_A ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+    set Chemical_S Chemical_S + 1 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
     ;; we might need to substract the Chemical_A from the patch if its absorbed by the B cell
   ]
 
@@ -368,8 +374,9 @@ to update-chemicals
   [
     ifelse ( [Chemical_B] of patch-here <= 0 )
     [ set SignalStrength SignalStrength - 1 ]
-    [ set SignalStrength SignalStrength + Chemical_B ] ;; update SignalStrength based on Chemical_B
+    [ set SignalStrength SignalStrength + 1 ] ;; update SignalStrength based on Chemical_B
     ;; we might need to substract this Chemical_B amount from the patch
+    set Chemical_B Chemical_B - 1
     set Chemical_A Chemical_A + 10  ;; drop some Chemical_A
   ]
 
@@ -481,8 +488,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-973
-974
+1653
+1654
 -1
 -1
 5.0
@@ -495,12 +502,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--96
-96
--96
-96
--4
-4
+-164
+164
+-164
+164
+0
+0
 1
 1
 1
@@ -843,7 +850,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-160.0
+5.0
 1
 0
 Number
@@ -899,7 +906,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-100.0
+0.0
 1
 1
 NIL
@@ -914,7 +921,7 @@ evaporation-rate
 evaporation-rate
 0
 100
-32.0
+99.0
 1
 1
 NIL
