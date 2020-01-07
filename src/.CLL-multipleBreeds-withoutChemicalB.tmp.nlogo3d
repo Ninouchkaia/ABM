@@ -200,7 +200,7 @@ to phagocyte_NLC
     let debris (turtle-set (DeadCancerCells-on neighbors) (LateApoCancerCells-on neighbors))
     ifelse (any? debris)
     ;; phagocyte
-    [ ask one-of debris [die] ]
+    [ ask odebris [die] ]
     [ if (random 100 < 50) [ move 1 nobody ] ]
 end
 
