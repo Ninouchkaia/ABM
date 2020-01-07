@@ -29,6 +29,10 @@ globals [
   prop-monocytes-init
   prop-apoptotic-init
   BlockedApoptosisThreshold
+<<<<<<< HEAD
+=======
+  NLC_threshold
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
   EarlyApoThreshold
   LateApoThreshold
   DeathThreshold
@@ -103,8 +107,13 @@ to setup-Globals
   ;; NeedSignalCancerCells need to accumulate some amount of Chemical_A anti-apoptotic signal from Monocytes and/or NLCs to enter BlockedApoptosis
   set BlockedApoptosisThreshold gui-BlockedApoptosisThreshold
 
+<<<<<<< HEAD
   ;; Monocytes need to be in contact of NeedSignalCancerCells cancer cells to increase their SignalStrength and eventually differentiate into NLCs
   set NLCThreshold gui-NLCThreshold
+=======
+  ;; Monocytes need to accumulate some amount of Chemical_B from NeedSignalCancerCells cancer cells to increase their SignalStrength and eventually differentiate into NLCs
+  set NLC_threshold gui-NLC_threshold
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 
   ;; NeedSignalCancerCells turn into EarlyApoCancerCells when they reach necrotic value 1
   set EarlyApoThreshold gui-EarlyApoThreshold
@@ -148,7 +157,12 @@ end
 to recolor-patch  ;; patch procedure
   ;; give color to chemical sources
   ;; scale color to show chemical concentration
+<<<<<<< HEAD
   set pcolor scale-color green Chemical_A -20 200
+=======
+  set pcolor scale-color green Chemical_A 0 50
+  ;;set pcolor scale-color red Chemical_B -20 200
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 end
 
 to setup-Monocytes
@@ -172,7 +186,7 @@ to setup-NeedSignalCancerCells
     set size 1
   ]
 
-  ;; create some EarlyApoCancerCells
+  ;; create some EarlyApoCancerCells at random values before EarlyApoThreshold
   ask n-of (prop-apoptotic-init * nb-cancer-cells-init / 100) NeedSignalCancerCells
   [
   set breed EarlyApoCancerCells
@@ -200,7 +214,7 @@ to phagocyte_NLC
     let debris (turtle-set (DeadCancerCells-on neighbors) (LateApoCancerCells-on neighbors))
     ifelse (any? debris)
     ;; phagocyte
-    [ ask odebris [die] ]
+    [ ask one-of debris [die] ]
     [ if (random 100 < 50) [ move 1 nobody ] ]
 end
 
@@ -245,13 +259,20 @@ end
 
 to move-to-chemical ;; cancer cell procedure
   let current-distance distance max_Chemical_A
-  let closer-positions neighbors with [not forbidden and
-                                           not any? turtles-here and
-                                           distance max_Chemical_A <= current-distance and
-                                           distance max_Chemical_A > 1]
-  ;;let possible-positions neighbors with [not forbidden and not any? turtles-here and Chemical_A > 0]
-  ifelse (any? closer-positions)
-  [ move-to max_Chemical_A ]
+  ;;let closer-positions neighbors with [not forbidden and
+                                           ;;not any? turtles-here and
+                                           ;;distance max_Chemical_A <= current-distance and
+                                           ;;distance max_Chemical_A > 1]
+  let possible-positions neighbors with [not forbidden and not any? turtles-here and Chemical_A > 0]
+  ;;ifelse (any? closer-positions)
+  ifelse (any? possible-positions)
+  [ move-to max_Chemical_A
+    move-to max_Chemical_A
+    move-to max_Chemical_A
+    move-to max_Chemical_A
+    move-to max_Chemical_A
+    move-to max_Chemical_A
+  ]
   [ move 6 nobody ]
 
 end
@@ -352,21 +373,31 @@ to update-chemicals
   ;; BlockedApoCancerCells actions
   ask BlockedApoCancerCells
   [
+    set Chemical_N Chemical_N + 1 ;; accumulate some Chemical_N
     ;; as long as they walk on patches with some Chemical_A, no change;
     ;; but when they walk on an empty patch, their Chemical_S decreases.
     if ( [Chemical_A] of patch-here <= 0 ) [ set Chemical_S Chemical_S - 1 ]
+
   ]
 
   ;; EarlyApoCancerCells actions
   ask EarlyApoCancerCells
   [
     set Chemical_N Chemical_N + 1 ;; accumulate some Chemical_N
+<<<<<<< HEAD
 
     if ( [Chemical_A] of patch-here > 0 )
     [
       set Chemical_S Chemical_S + 10 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
       ;; we might need to substract the Chemical_A from the patch if its absorbed by the B cell
       set Chemical_A Chemical_A - 10
+=======
+    if ( [Chemical_A] of patch-here > 0 )
+    [
+      set Chemical_S Chemical_S + 1 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+      ;; we might need to substract the Chemical_A from the patch if its absorbed by the B cell
+      set Chemical_A Chemical_A - 1
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
     ]
   ]
 
@@ -374,31 +405,55 @@ to update-chemicals
   ask LateApoCancerCells
   [
     set Chemical_N Chemical_N + 1 ;; accumulate some Chemical_N
+    set Chemical_S 0
   ]
 
   ;; Monocytes actions
   ask Monocytes
   [
+<<<<<<< HEAD
     ifelse ( any? NeedSignalCancerCells-on neighbors )
     [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
     ]
     [ set SignalStrength SignalStrength - 1 ]
 
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
+=======
+    update-SignalStrength-BasedOnChemical_B
+    ;; set Chemical_A Chemical_A + SignalStrength / 10 ;; drop some Chemical_A based on the cell signalling power (signal strength)
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
   ]
 
   ;; NurseLikeCells actions
   ask NurseLikeCells
   [
+<<<<<<< HEAD
     if not ( any? NeedSignalCancerCells-on neighbors )
     [ set SignalStrength SignalStrength - 1 ]
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
+=======
+     set Chemical_A Chemical_A + SignalStrength ;; then drop more Chemical_A than a monocyte, here 10x times more. TODO : make proportional setting from interface !!
+     ;;update-SignalStrength-BasedOnChemical_B
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
   ]
 
 end
 
+to update-SignalStrength-BasedOnChemical_B
+    ;; update SignalStrength based on Chemical_B
+    ifelse ( [Chemical_B] of patch-here <= 0 )
+    [ set SignalStrength SignalStrength - 1 ]
+    [
+      set SignalStrength SignalStrength + 1
+      ;; we substract this Chemical_B amount from the patch
+      set Chemical_B Chemical_B - 1
+    ]
+end
+
+
 to update-breeds
-  ;; NeedSignalCancerCells
+  ;; NeedSignalCancerCells should turn into EarlyApoCancerCells if they accumulate too much necrotic factors.
+  ;; They still contain the same amount of necrotic factors and survival potential linked to
   ask NeedSignalCancerCells
   [
     if ( Chemical_N >= EarlyApoThreshold )
@@ -425,6 +480,16 @@ to update-breeds
   ;; EarlyApoCancerCells
   ask EarlyApoCancerCells
   [
+    if ( Chemical_S >= BlockedApoptosisThreshold)
+    [
+      ;; change from NeedSignalCancerCell to BlockedApoCancerCell
+      set breed BlockedApoCancerCells
+      set color pink
+      set shape "default"
+      set Chemical_N 0
+      set Chemical_S Chemical_S
+    ]
+
     if ( Chemical_N >= LateApoThreshold )
     [
       ;; change from EarlyApoCancerCell to LateApoCancerCell
@@ -459,7 +524,7 @@ to update-breeds
       set breed NeedSignalCancerCells
       set color red
       set shape "default"
-      set Chemical_N 0
+      set Chemical_N Chemical_N
       set Chemical_S 0
     ]
   ]
@@ -567,10 +632,10 @@ NIL
 1
 
 MONITOR
-2
-581
-90
-626
+0
+423
+88
+468
 cancer cells
 count BlockedApoCancerCells + count EarlyApoCancerCells + count LateApoCancerCells + count NeedSignalCancerCells
 17
@@ -588,10 +653,10 @@ model
 1
 
 MONITOR
-2
-626
-90
-671
+0
+468
+88
+513
 monocytes
 count Monocytes
 17
@@ -599,10 +664,10 @@ count Monocytes
 11
 
 MONITOR
-3
-671
-91
-716
+1
+513
+89
+558
 NLCs
 count NurseLikeCells
 17
@@ -627,10 +692,10 @@ NIL
 1
 
 MONITOR
-2
-536
-91
-581
+0
+378
+89
+423
 NIL
 count turtles
 17
@@ -638,10 +703,10 @@ count turtles
 11
 
 MONITOR
-3
-761
-109
-806
+1
+603
+107
+648
 allowed patches
 count patches with [not forbidden]
 17
@@ -673,10 +738,10 @@ PENS
 "late + dead = debris" 1.0 0 -6459832 true "" "plot count (LateApoCancerCells) + count (DeadCancerCells)"
 
 MONITOR
-3
-716
-91
-761
+1
+558
+89
+603
 dead cells
 count DeadCancerCells
 17
@@ -684,10 +749,10 @@ count DeadCancerCells
 11
 
 MONITOR
-91
-582
-223
-627
+89
+424
+221
+469
 apoptotic
 count EarlyApoCancerCells + count LateApoCancerCells
 17
@@ -695,10 +760,10 @@ count EarlyApoCancerCells + count LateApoCancerCells
 11
 
 MONITOR
-91
-537
-223
-582
+89
+379
+221
+424
 blocked-apoptosis
 count BlockedApoCancerCells
 17
@@ -733,7 +798,7 @@ INPUTBOX
 225
 380
 gui-DeathThreshold
-200.0
+180.0
 1
 0
 Number
@@ -767,10 +832,10 @@ gui-prop-world-filled-init
 Number
 
 INPUTBOX
-8
-382
-169
-442
+6
+264
+167
+324
 gui-simulation-duration
 13.0
 1
@@ -778,10 +843,17 @@ gui-simulation-duration
 Number
 
 PLOT
+<<<<<<< HEAD
 603
 193
 851
 313
+=======
+196
+567
+375
+687
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 monocytes
 NIL
 NIL
@@ -797,10 +869,10 @@ PENS
 "NLCs" 1.0 0 -10899396 true "" "plot count NurseLikeCells "
 
 MONITOR
-91
-627
-222
-672
+89
+469
+220
+514
 early-apoptotic
 count EarlyApoCancerCells
 17
@@ -808,10 +880,10 @@ count EarlyApoCancerCells
 11
 
 MONITOR
-90
-672
-220
-717
+88
+514
+218
+559
 late-apoptotic
 count LateApoCancerCells
 17
@@ -819,17 +891,26 @@ count LateApoCancerCells
 11
 
 MONITOR
+<<<<<<< HEAD
 3
 805
 77
 850
 days
+=======
+1
+647
+75
+692
+n. of days
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 ticks / 24
 1
 1
 11
 
 INPUTBOX
+<<<<<<< HEAD
 12
 264
 112
@@ -841,6 +922,8 @@ gui-NLCThreshold
 Number
 
 INPUTBOX
+=======
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 119
 207
 233
@@ -857,16 +940,27 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
+<<<<<<< HEAD
 100.0
+=======
+1.0
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 1
 0
 Number
 
 PLOT
+<<<<<<< HEAD
 823
 13
 1206
 188
+=======
+375
+622
+1148
+742
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 viability & survival rate
 time
 %
@@ -884,10 +978,10 @@ PENS
 "days" 1.0 0 -7500403 true "" "plot ticks / 24"
 
 MONITOR
-77
-805
-176
-850
+75
+647
+174
+692
 Average Signal
 (sum ([SignalStrength] of Monocytes) +  sum ([SignalStrength] of NurseLikeCells))/ (count Monocytes + count NurseLikeCells)
 2
@@ -906,10 +1000,10 @@ gui-LateApoThreshold
 Number
 
 SLIDER
-168
-381
-340
-414
+241
+246
+413
+279
 diffusion-rate
 diffusion-rate
 0
@@ -921,15 +1015,19 @@ NIL
 HORIZONTAL
 
 SLIDER
-168
-412
-340
-445
+241
+277
+413
+310
 evaporation-rate
 evaporation-rate
 0
 100
+<<<<<<< HEAD
 0.0
+=======
+29.0
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 1
 1
 NIL
@@ -951,13 +1049,18 @@ true
 true
 "" ""
 PENS
+<<<<<<< HEAD
 "avg A on patches" 1.0 0 -15040220 true "" "plot (sum ([Chemical_A] of patches with [not forbidden]) )/ (count patches with [not forbidden])"
+=======
+"Survival Factors" 1.0 0 -15040220 true "" "plot (sum ([Chemical_A] of patches with [not forbidden]) )/ (count patches with [not forbidden])"
+"Cytokines" 1.0 0 -2674135 true "" "plot (sum ([Chemical_B] of patches with [not forbidden]) )/ (count patches with [not forbidden])"
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 
 MONITOR
-225
-536
-302
-581
+223
+378
+300
+423
 Chemical_A
 (sum ([Chemical_A] of patches with [not forbidden]) )/ (count patches with [not forbidden])
 2
@@ -965,10 +1068,28 @@ Chemical_A
 11
 
 MONITOR
+<<<<<<< HEAD
 224
 629
 302
 674
+=======
+225
+425
+300
+470
+Chemical_B
+(sum ([Chemical_B] of patches with [not forbidden]) )/ (count patches with [not forbidden])
+2
+1
+11
+
+MONITOR
+222
+471
+300
+516
+>>>>>>> 72181173413a8a114f7e91d1b2c1e93392e36e0c
 Chemical_N
 (sum [Chemical_N] of NeedSignalCancerCells + \nsum [Chemical_N] of EarlyApoCancerCells + \nsum [Chemical_N] of LateApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells +\ncount LateApoCancerCells\n)
 2
@@ -976,12 +1097,12 @@ Chemical_N
 11
 
 MONITOR
-225
-675
-300
-720
+223
+517
+298
+562
 Chemical_S
-(sum [Chemical_S] of NeedSignalCancerCells + \nsum [Chemical_S] of EarlyApoCancerCells + \nsum [Chemical_S] of LateApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells +\ncount LateApoCancerCells\n)
+(sum [Chemical_S] of NeedSignalCancerCells + \nsum [Chemical_S] of EarlyApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells\n)
 17
 1
 11
@@ -1002,8 +1123,41 @@ true
 true
 "" ""
 PENS
-"Chemical_N" 1.0 0 -16448764 true "" "plot\n(sum [Chemical_N] of NeedSignalCancerCells + \nsum [Chemical_N] of EarlyApoCancerCells + \nsum [Chemical_N] of LateApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells +\ncount LateApoCancerCells\n)"
-"Chemical_S" 1.0 0 -2064490 true "" "plot \n(sum [Chemical_S] of NeedSignalCancerCells + \nsum [Chemical_S] of EarlyApoCancerCells + \nsum [Chemical_S] of LateApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells +\ncount LateApoCancerCells\n)"
+"Necrotic Factor" 1.0 0 -16448764 true "" "plot\n(sum [Chemical_N] of NeedSignalCancerCells + \nsum [Chemical_N] of EarlyApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells\n)"
+"Survival Potential" 1.0 0 -2064490 true "" "plot \n(sum [Chemical_S] of NeedSignalCancerCells + \nsum [Chemical_S] of EarlyApoCancerCells\n)\n\n/ \n(\ncount NeedSignalCancerCells + \ncount EarlyApoCancerCells\n)"
+
+SLIDER
+234
+207
+406
+240
+gui-NLC_threshold
+gui-NLC_threshold
+0
+500
+70.0
+1
+1
+NIL
+HORIZONTAL
+
+PLOT
+196
+689
+396
+839
+Avg Signal Strength
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot (sum ([SignalStrength] of Monocytes) +  sum ([SignalStrength] of NurseLikeCells))/ (count Monocytes + count NurseLikeCells)"
 
 PLOT
 655
