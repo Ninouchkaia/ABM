@@ -160,6 +160,7 @@ to setup-Monocytes
     set SignalStrength 0
     set color blue
     set shape "square"
+    set size 1
   ]
 end
 
@@ -244,25 +245,15 @@ to move [steps goal] ;; agent procedure
 end
 
 to move-to-chemical ;; cancer cell procedure
-  let current-distance distance max_Chemical_A
-  let closer-positions neighbors with [not forbidden and
-                                           not any? turtles-here and
-                                           distance max_Chemical_A <= current-distance and
-                                           distance max_Chemical_A > 1]
-  ;;let possible-positions neighbors with [not forbidden and not any? turtles-here and Chemical_A > 0]
-  ifelse (any? closer-positions)
-  [ move-to max_Chemical_A ]
-  [ move 6 nobody ]
-
-end
-
-to-report max_Chemical_A ;; cancer cell procedure
-  ;; sniff around, and report where the strongest smell is
-  let possible-patches neighbors with [not forbidden and not any? turtles-here]
-  let max-chemical-patches possible-patches with-max [Chemical_A]
-  ifelse (any? max-chemical-patches)
-  [report one-of max-chemical-patches]
-  [report one-of neighbors]
+  ;; sniff around, and go where the strongest smell is. If there is no smell move randomly
+  let possible-positions neighbors with [not forbidden and not any? turtles-here]
+  ifelse (any? possible-positions)
+  [
+    let max-chemical-positions possible-positions with-max [Chemical_A]
+    if (any? max-chemical-positions)
+    [move-to one-of max-chemical-positions]
+  ]
+  [move 6 nobody]
 end
 
 ;;;;;;;;;;;;;;
@@ -306,7 +297,7 @@ to update-positions
 
   ;; BlockedApoCancerCells actions
   ask BlockedApoCancerCells
-  [ move 1 nobody ]
+  [ move 6 nobody ]
 
   ;; EarlyApoCancerCells actions
   ask EarlyApoCancerCells
@@ -343,9 +334,10 @@ to update-chemicals
     set Chemical_N Chemical_N + 1 ;; accumulate some Chemical_N
     if ( [Chemical_A] of patch-here > 0 )
     [
-      set Chemical_S Chemical_S + 10 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+      ;;set Chemical_S Chemical_S + 10 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+      set Chemical_S Chemical_S + Chemical_A / 10
       ;; we might need to substract the Chemical_A from the patch if its absorbed by the B cell
-      set Chemical_A Chemical_A - 10
+      set Chemical_A Chemical_A - Chemical_A / 10
     ]
   ]
 
@@ -354,7 +346,8 @@ to update-chemicals
   [
     ;; as long as they walk on patches with some Chemical_A, no change;
     ;; but when they walk on an empty patch, their Chemical_S decreases.
-    if ( [Chemical_A] of patch-here <= 0 ) [ set Chemical_S Chemical_S - 1 ]
+    if ( [Chemical_A] of patch-here <= 1 )
+    [ set Chemical_S Chemical_S - Chemical_S / 10 ]
   ]
 
   ;; EarlyApoCancerCells actions
@@ -364,9 +357,10 @@ to update-chemicals
 
     if ( [Chemical_A] of patch-here > 0 )
     [
-      set Chemical_S Chemical_S + 10 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+      ;;set Chemical_S Chemical_S + 10 ;; accumulate some Chemical_S via the absorption of Chemical_A which increases survival (anti-apoptotic signal)
+      set Chemical_S Chemical_S + Chemical_A / 10
       ;; we might need to substract the Chemical_A from the patch if its absorbed by the B cell
-      set Chemical_A Chemical_A - 10
+      set Chemical_A Chemical_A - Chemical_A / 10
     ]
   ]
 
@@ -380,9 +374,8 @@ to update-chemicals
   ask Monocytes
   [
     ifelse ( any? NeedSignalCancerCells-on neighbors )
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
-    ]
-    [ set SignalStrength SignalStrength - 1 ]
+    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)]
+    [ set SignalStrength SignalStrength - SignalStrength / 10 ]
 
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
   ]
@@ -391,7 +384,7 @@ to update-chemicals
   ask NurseLikeCells
   [
     if not ( any? NeedSignalCancerCells-on neighbors )
-    [ set SignalStrength SignalStrength - 1 ]
+    [ set SignalStrength SignalStrength - SignalStrength / 10 ]
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
   ]
 
@@ -473,6 +466,7 @@ to update-breeds
       set breed NurseLikeCells
       set color green
       set shape "square"
+      set size 1
       set SignalStrength SignalStrength
     ]
   ]
@@ -486,6 +480,7 @@ to update-breeds
       set breed Monocytes
       set color blue
       set shape "square"
+      set size 1
       set SignalStrength SignalStrength
     ]
   ]
@@ -733,7 +728,7 @@ INPUTBOX
 225
 380
 gui-DeathThreshold
-200.0
+225.0
 1
 0
 Number
@@ -835,7 +830,7 @@ INPUTBOX
 112
 324
 gui-NLCThreshold
-700.0
+1000.0
 1
 0
 Number
@@ -846,7 +841,7 @@ INPUTBOX
 233
 267
 gui-EarlyApoThreshold
-100.0
+150.0
 1
 0
 Number
@@ -857,7 +852,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-100.0
+25.0
 1
 0
 Number
@@ -900,7 +895,7 @@ INPUTBOX
 238
 324
 gui-LateApoThreshold
-150.0
+200.0
 1
 0
 Number
@@ -914,7 +909,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-37.0
+4.0
 1
 1
 NIL
@@ -929,7 +924,7 @@ evaporation-rate
 evaporation-rate
 0
 100
-0.0
+40.0
 1
 1
 NIL
