@@ -124,7 +124,7 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max 3
+  set z-max
   set coef 4
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
@@ -490,8 +490,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-973
-974
+733
+734
 -1
 -1
 5.0
@@ -504,12 +504,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--96
-96
--96
-96
--12
-12
+-72
+72
+-72
+72
+-4
+4
 1
 1
 1
@@ -539,7 +539,7 @@ INPUTBOX
 169
 146
 gui-nb-cancer-cells-init
-10000.0
+2500.0
 1
 0
 Number
