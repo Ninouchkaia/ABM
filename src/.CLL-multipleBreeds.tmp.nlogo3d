@@ -124,7 +124,7 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max
+  set z-max 3
   set coef 4
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
@@ -253,7 +253,7 @@ to move-to-chemical ;; cancer cell procedure
     if (any? max-chemical-positions)
     [move-to one-of max-chemical-positions]
   ]
-  [move 6 nobody]
+  [move  nobody]
 end
 
 ;;;;;;;;;;;;;;
@@ -490,8 +490,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-733
-734
+973
+974
 -1
 -1
 5.0
@@ -504,12 +504,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
--4
-4
+-96
+96
+-96
+96
+-12
+12
 1
 1
 1
@@ -539,7 +539,7 @@ INPUTBOX
 169
 146
 gui-nb-cancer-cells-init
-2500.0
+10000.0
 1
 0
 Number
@@ -852,7 +852,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-25.0
+2.0
 1
 0
 Number
@@ -909,7 +909,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-9.0
+15.0
 1
 1
 NIL

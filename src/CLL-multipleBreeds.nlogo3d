@@ -253,7 +253,7 @@ to move-to-chemical ;; cancer cell procedure
     if (any? max-chemical-positions)
     [move-to one-of max-chemical-positions]
   ]
-  [move 6 nobody]
+  [move 12 nobody]
 end
 
 ;;;;;;;;;;;;;;
@@ -852,7 +852,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-25.0
+2.0
 1
 0
 Number
@@ -909,7 +909,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-9.0
+15.0
 1
 1
 NIL
