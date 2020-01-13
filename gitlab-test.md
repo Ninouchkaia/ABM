@@ -4,9 +4,9 @@ This is my first simulation.
 
  Code that was used to generate this picture is :
 
-https://gitlab.com/verstraete.nina/ABM/blob/a4325dfd7e90c55b33cff0dfc7dc7f285eee7060/src/CLL-multipleBreeds.nlogo3d
+https://github.com/Ninouchkaia/ABM/blob/a4325dfd7e90c55b33cff0dfc7dc7f285eee7060/src/CLL-multipleBreeds.nlogo3d
 
 This is my second simulation
 ![Image](images/myCapture2.PNG)
  Code that was used to generate this picture is :
- https://github.com/github/linguist/compare/a4325df..60113fb
+https://github.com/Ninouchkaia/ABM/compare/a4325df..60113fb
