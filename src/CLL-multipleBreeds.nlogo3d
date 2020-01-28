@@ -1,3 +1,5 @@
+extensions [ vid ] ;; to record a movie of the simulation
+
 ;;;;;;;;;;;;;;;;;;
 ;;;;; BREEDS ;;;;;
 ;;;;;;;;;;;;;;;;;;
@@ -82,7 +84,7 @@ NurseLikeCells-own[
 to setup
   clear-all
   reset-ticks
-  let seed 12
+  let seed random 42
   random-seed seed
 
   setup-Globals
@@ -90,6 +92,11 @@ to setup
   setup-World
   setup-Monocytes
   setup-NeedSignalCancerCells
+
+  ;; initialize the video of the simulation run
+  vid:reset-recorder
+  (vid:start-recorder 720 720)
+  vid:record-interface
 
 end
 
@@ -128,7 +135,7 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max 1
+  set z-max 0
   set coef 4
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
@@ -140,7 +147,6 @@ to setup-World
     [ set forbidden true ]
     [ set forbidden false
       set Chemical_A 0
-      ;;recolor-patch
     ]
   ]
 
@@ -152,7 +158,7 @@ end
 to recolor-patch  ;; patch procedure
   ;; give color to chemical sources
   ;; scale color to show chemical concentration
-  set pcolor scale-color green Chemical_A -20 200
+  set pcolor scale-color green Chemical_A 0.1 20
 end
 
 to setup-Monocytes
@@ -271,6 +277,8 @@ to go
   ifelse (count NeedSignalCancerCells + count EarlyApoCancerCells + count LateApoCancerCells + count BlockedApoCancerCells > 0)
   [
     common-go-procedures
+    ;; record the state of the world
+    vid:record-view
     tick
   ]
   [ stop ]
@@ -329,7 +337,7 @@ to update-chemicals
   ask patches
   [
     set chemical_A chemical_A * (100 - evaporation-rate) / 100  ;; slowly evaporate chemical_A
-    ;;recolor-patch
+    recolor-patch
   ]
 
   ;; NeedSignalCancerCells actions
@@ -503,12 +511,17 @@ to update-breeds
   ]
 
 end
+
+to outputs
+  ;; save the video recording
+  vid:save-recording "film-ABM-nina.mp4"
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
 0
-733
-734
+1653
+1654
 -1
 -1
 5.0
@@ -521,12 +534,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
--4
-4
+-164
+164
+-164
+164
+0
+0
 1
 1
 1
@@ -723,7 +736,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-1.0
+2.0
 1
 0
 Number
@@ -745,7 +758,7 @@ INPUTBOX
 329
 265
 gui-DeathThreshold
-200.0
+350.0
 1
 0
 Number
@@ -773,7 +786,7 @@ INPUTBOX
 329
 146
 gui-prop-world-filled-init
-85.5
+50.0
 1
 0
 Number
@@ -847,7 +860,7 @@ INPUTBOX
 178
 265
 gui-EarlyApoThreshold
-80.0
+250.0
 1
 0
 Number
@@ -901,7 +914,7 @@ INPUTBOX
 260
 267
 gui-LateApoThreshold
-140.0
+300.0
 1
 0
 Number
@@ -915,7 +928,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-12.0
+89.0
 1
 1
 NIL
@@ -930,7 +943,7 @@ evaporation-rate
 evaporation-rate
 0
 100
-88.0
+39.0
 1
 1
 NIL
@@ -1087,7 +1100,7 @@ INPUTBOX
 344
 326
 gui-Chemical_A_Threshold_toStayInBlockedApoptosis
-50.0
+5.0
 1
 0
 Number
