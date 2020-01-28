@@ -94,9 +94,11 @@ to setup
   setup-NeedSignalCancerCells
 
   ;; initialize the video of the simulation run
+
   vid:reset-recorder
-  (vid:start-recorder 720 720)
-  vid:record-interface
+  (vid:start-recorder 700 700)
+
+  vid:record-view
 
 end
 
@@ -514,7 +516,7 @@ end
 
 to outputs
   ;; save the video recording
-  vid:save-recording "film-ABM-nina.mp4"
+  vid:save-recording "film-ABM-nina2.mp4"
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -928,7 +930,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-89.0
+0.0
 1
 1
 NIL
@@ -943,7 +945,7 @@ evaporation-rate
 evaporation-rate
 0
 100
-39.0
+95.0
 1
 1
 NIL

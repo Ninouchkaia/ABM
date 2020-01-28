@@ -1,3 +1,5 @@
+extensions [ vid ] ;; to record a movie of the simulation
+
 ;;;;;;;;;;;;;;;;;;
 ;;;;; BREEDS ;;;;;
 ;;;;;;;;;;;;;;;;;;
@@ -82,7 +84,7 @@ NurseLikeCells-own[
 to setup
   clear-all
   reset-ticks
-  let seed 12
+  let seed random 42
   random-seed seed
 
   setup-Globals
@@ -90,6 +92,14 @@ to setup
   setup-World
   setup-Monocytes
   setup-NeedSignalCancerCells
+
+  ;; initialize the video of the simulation run
+
+  vid:reset-recorder
+  (vid:start-recorder 700 700)
+
+  vid:movie-("film-ABM-nina2.mp4")
+  vid:record-source
 
 end
 
@@ -128,7 +138,7 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max 1
+  set z-max 0
   set coef 4
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
@@ -140,7 +150,6 @@ to setup-World
     [ set forbidden true ]
     [ set forbidden false
       set Chemical_A 0
-      ;;recolor-patch
     ]
   ]
 
@@ -152,7 +161,7 @@ end
 to recolor-patch  ;; patch procedure
   ;; give color to chemical sources
   ;; scale color to show chemical concentration
-  set pcolor scale-color green Chemical_A -20 200
+  set pcolor scale-color green Chemical_A 0.1 20
 end
 
 to setup-Monocytes
@@ -163,7 +172,7 @@ to setup-Monocytes
     set Chemical_A 0
     set SignalStrength 0
     set color blue
-    set shape "square"
+    set shape "pentagon"
     set size 1
   ]
 end
@@ -181,7 +190,7 @@ to setup-NeedSignalCancerCells
   ask n-of (prop-apoptotic-init * nb-cancer-cells-init / 100) NeedSignalCancerCells
   [
   set breed EarlyApoCancerCells
-    set Chemical_N random EarlyApoThreshold
+    set Chemical_N EarlyApoThreshold + random-float LateApoThreshold
     set Chemical_S 0
     set color orange
     set shape "default"
@@ -271,6 +280,8 @@ to go
   ifelse (count NeedSignalCancerCells + count EarlyApoCancerCells + count LateApoCancerCells + count BlockedApoCancerCells > 0)
   [
     common-go-procedures
+    ;; record the state of the world
+    vid:record-view
     tick
   ]
   [ stop ]
@@ -329,7 +340,7 @@ to update-chemicals
   ask patches
   [
     set chemical_A chemical_A * (100 - evaporation-rate) / 100  ;; slowly evaporate chemical_A
-    ;;recolor-patch
+    recolor-patch
   ]
 
   ;; NeedSignalCancerCells actions
@@ -377,8 +388,8 @@ to update-chemicals
   ;; Monocytes actions
   ask Monocytes
   [
-    ifelse ( any? NeedSignalCancerCells-on neighbors) or any? BlockedApoCancerCells-on neighbors )
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors)]
+    ifelse ( any? NeedSignalCancerCells-on neighbors)
+    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)]
     [ set SignalStrength SignalStrength - SignalStrength / 10 ]
 
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
@@ -387,8 +398,9 @@ to update-chemicals
   ;; NurseLikeCells actions
   ask NurseLikeCells
   [
-    ifelse ( any? NeedSignalCancerCells-on neighbors or any? BlockedApoCancerCells-on neighbors )
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors)]
+
+    ifelse ( any? NeedSignalCancerCells-on neighbors or any? BlockedApoCancerCells-on neighbors)
+    [ set SignalStrength SignalStrength]
     [ set SignalStrength SignalStrength - SignalStrength / 10 ]
 
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
@@ -433,6 +445,16 @@ to update-breeds
       set Chemical_N Chemical_N
       set Chemical_S 0
     ]
+
+    if ( Chemical_S >= BlockedApoptosisThreshold and any? NurseLikeCells-on neighbors )
+    [
+      ;; change from NeedSignalCancerCell to BlockedApoCancerCell
+      set breed BlockedApoCancerCells
+      set color pink
+      set shape "default"
+      set Chemical_N 0
+      set Chemical_S Chemical_S
+    ]
   ]
 
   ;; LateApoCancerCells
@@ -471,7 +493,7 @@ to update-breeds
       ;; change from Monocyte to NurseLikeCells
       set breed NurseLikeCells
       set color green
-      set shape "square"
+      set shape "pentagon"
       set size 1
       set SignalStrength SignalStrength
     ]
@@ -485,19 +507,24 @@ to update-breeds
       ;; change from Monocyte to NurseLikeCells
       set breed Monocytes
       set color blue
-      set shape "square"
+      set shape "pentagon"
       set size 1
       set SignalStrength SignalStrength
     ]
   ]
 
 end
+
+to outputs
+  ;; save the video recording
+  vid:save-recording "film-ABM-nina2.mp4"
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
 0
-733
-734
+1653
+1654
 -1
 -1
 5.0
@@ -510,12 +537,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
--4
-4
+-164
+164
+-164
+164
+0
+0
 1
 1
 1
@@ -712,7 +739,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-1.0
+2.0
 1
 0
 Number
@@ -734,7 +761,7 @@ INPUTBOX
 329
 265
 gui-DeathThreshold
-150.0
+350.0
 1
 0
 Number
@@ -762,7 +789,7 @@ INPUTBOX
 329
 146
 gui-prop-world-filled-init
-85.5
+50.0
 1
 0
 Number
@@ -825,7 +852,7 @@ INPUTBOX
 74
 324
 gui-NLCThreshold
-100.0
+500.0
 1
 0
 Number
@@ -836,7 +863,7 @@ INPUTBOX
 178
 265
 gui-EarlyApoThreshold
-50.0
+250.0
 1
 0
 Number
@@ -847,7 +874,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-0.0
+1.0
 1
 0
 Number
@@ -890,7 +917,7 @@ INPUTBOX
 260
 267
 gui-LateApoThreshold
-100.0
+300.0
 1
 0
 Number
@@ -904,7 +931,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-50.0
+0.0
 1
 1
 NIL
@@ -919,7 +946,7 @@ evaporation-rate
 evaporation-rate
 0
 100
-0.0
+95.0
 1
 1
 NIL
@@ -1076,7 +1103,7 @@ INPUTBOX
 344
 326
 gui-Chemical_A_Threshold_toStayInBlockedApoptosis
-1.0
+5.0
 1
 0
 Number
