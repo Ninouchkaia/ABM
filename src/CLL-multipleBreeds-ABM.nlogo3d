@@ -19,6 +19,10 @@ breed [ NurseLikeCells NurseLikeCell ]
 ;;;;;;;;;;;;;;;;;;;;;
 
 globals [
+
+  headless-mode?
+  nb-monocytes-init
+
   ;; create limits of the world
   z-max
   coef
@@ -26,7 +30,6 @@ globals [
   ;; global variables for headless mode
   simulation-duration
   prop-world-filled-init
-  nb-monocytes-init
   nb-cancer-cells-init
   prop-monocytes-init
   prop-apoptotic-init
@@ -36,6 +39,24 @@ globals [
   DeathThreshold
   NLCThreshold
   SurvivalDecayThreshold
+
+  ;; outputs for headless mode
+  nb-NeedSignalCancerCells
+  nb-BlockedApoCancerCells
+  nb-EarlyApoCancerCells
+  nb-LateApoCancerCells
+  nb-Monocytes
+  nb-NurseLikeCells
+  nb-DeadCancerCells
+
+  ;; lists for time series
+  ts-NeedSignalCancerCells
+  ts-BlockedApoCancerCells
+  ts-EarlyApoCancerCells
+  ts-LateApoCancerCells
+  ts-Monocytes
+  ts-NurseLikeCells
+  ts-DeadCancerCells
 ]
 
 patches-own [
@@ -84,6 +105,9 @@ NurseLikeCells-own[
 to setup
   clear-all
   reset-ticks
+
+  set headless-mode? false
+
   let seed random 42
   random-seed seed
 
@@ -102,7 +126,19 @@ to setup
 
 end
 
+to headless-setup
+  reset-ticks
 
+  set headless-mode? true
+
+  ;; initialize cells and patches
+  setup-world
+  setup-Monocytes
+  setup-NeedSignalCancerCells
+
+  ;; initialize time series
+  setup-ts
+end
 
 to setup-Globals
   set prop-world-filled-init gui-prop-world-filled-init
@@ -137,8 +173,10 @@ to setup-World
   let nb-cells-init nb-cancer-cells-init + nb-monocytes-init
 
   ;; resize the simulation world
-  set z-max 1
-  set coef 4
+  if (not headless-mode?) [
+    set z-max 1
+    set coef 4
+  ]
   let world-radius ceiling sqrt (nb-cells-init * 100 / (prop-world-filled-init * pi * (z-max * 2 + 1)))
   resize-world (- world-radius * coef) (world-radius * coef) (- world-radius * coef) (world-radius * coef) (- z-max * coef) (z-max * coef)
 
@@ -196,6 +234,16 @@ to setup-NeedSignalCancerCells
   ]
   end
 
+to setup-ts
+  ;; update time series
+  set ts-NeedSignalCancerCells (list (count NeedSignalCancerCells))
+  set ts-BlockedApoCancerCells (list (count BlockedApoCancerCells))
+  set ts-EarlyApoCancerCells (list (count EarlyApoCancerCells))
+  set ts-LateApoCancerCells (list (count LateApoCancerCells))
+  set ts-Monocytes (list (count Monocytes))
+  set ts-NurseLikeCells (list (count NurseLikeCells))
+  set ts-DeadCancerCells (list (count DeadCancerCells))
+end
 
 ;;UTILS
 
@@ -268,6 +316,7 @@ to move-to-chemical ;; cancer cell procedure
   [move 12 nobody]
 end
 
+
 ;;;;;;;;;;;;;;
 ;;;;; GO ;;;;;
 ;;;;;;;;;;;;;;
@@ -284,6 +333,14 @@ to go
     tick
   ]
   [ stop ]
+end
+
+to headless-go
+  common-go-procedures
+  ;; update time series of cell counts
+  save-ts
+  ;; increment the time step
+  tick
 end
 
 to common-go-procedures ;; between headless and gui modes
@@ -387,8 +444,8 @@ to update-chemicals
   ;; Monocytes actions
   ask Monocytes
   [
-    ifelse ( any? NeedSignalCancerCells-on neighbors or any? BlockedApoCancerCells-on neighbors)
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors)]
+    ifelse ( any? NeedSignalCancerCells-on neighbors)
+    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)]
     [ set SignalStrength SignalStrength - SignalStrength / 10 ]
 
     set Chemical_A Chemical_A + SignalStrength / 10  ;; drop some Chemical_A proportional to SignalStrength
@@ -515,16 +572,40 @@ to update-breeds
 
 end
 
+
+to save-ts
+  ;; save time series of cell counts
+
+  set ts-NeedSignalCancerCells lput (count NeedSignalCancerCells) ts-NeedSignalCancerCells
+  set ts-BlockedApoCancerCells lput (count BlockedApoCancerCells) ts-BlockedApoCancerCells
+  set ts-EarlyApoCancerCells lput (count EarlyApoCancerCells) ts-EarlyApoCancerCells
+  set ts-LateApoCancerCells lput (count LateApoCancerCells) ts-LateApoCancerCells
+  set ts-Monocytes lput (count Monocytes) ts-Monocytes
+  set ts-NurseLikeCells lput (count NurseLikeCells) ts-NurseLikeCells
+  set ts-DeadCancerCells lput (count DeadCancerCells) ts-DeadCancerCells
+end
+
+
 to outputs
   ;; save the video recording
-  ;vid:save-recording "film-ABM-nina-2560-1440.mp4"
+;  vid:save-recording "film.mp4"
+
+  ;; Outputs
+  set nb-NeedSignalCancerCells count NeedSignalCancerCells
+  set nb-BlockedApoCancerCells count BlockedApoCancerCells
+  set nb-EarlyApoCancerCells count EarlyApoCancerCells
+  set nb-LateApoCancerCells count LateApoCancerCells
+  set nb-Monocytes count Monocytes
+  set nb-NurseLikeCells  count NurseLikeCells
+  set nb-DeadCancerCells count DeadCancerCells
 end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
 0
-733
-734
+1253
+1254
 -1
 -1
 5.0
@@ -537,12 +618,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--72
-72
--72
-72
--4
-4
+-124
+124
+-124
+124
+0
+0
 1
 1
 1
@@ -761,7 +842,7 @@ INPUTBOX
 329
 265
 gui-DeathThreshold
-250.0
+500.0
 1
 0
 Number
@@ -852,7 +933,7 @@ INPUTBOX
 74
 324
 gui-NLCThreshold
-1000.0
+1500.0
 1
 0
 Number
@@ -863,7 +944,7 @@ INPUTBOX
 178
 265
 gui-EarlyApoThreshold
-150.0
+400.0
 1
 0
 Number
@@ -917,7 +998,7 @@ INPUTBOX
 260
 267
 gui-LateApoThreshold
-200.0
+450.0
 1
 0
 Number
@@ -946,7 +1027,7 @@ degradation-rate
 degradation-rate
 0
 100
-7.0
+0.0
 1
 1
 NIL
