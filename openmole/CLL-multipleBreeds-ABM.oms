@@ -1,0 +1,82 @@
+// Inputs
+val mySeed = Val[Int]
+val simulationDuration = Val[Int]
+val zMax = Val[Int]
+val coef = Val[Int]
+val propWorldFilledInit = Val[Double]
+val nbCancerCellsInit = Val[Int]
+val propMonocytesInit = Val[Double]
+val propApoptoticInit = Val[Double]
+val blockedApoptosisThreshold = Val[Int]
+val earlyApoThreshold = Val[Int]
+val lateApoThreshold = Val[Int]
+val deathThreshold = Val[Int]
+val nLCThreshold = Val[Int]
+val survivalDecayThreshold = Val[Int]
+
+// Outputs
+val nbNeedSignalCancerCells = Val[Double]
+val nbBlockedApoCancerCells = Val[Double]
+val nbEarlyApoCancerCells = Val[Double]
+val nbLateApoCancerCells = Val[Double]
+val nbMonocytes = Val[Double]
+val nbNurseLikeCells = Val[Double]
+val nbDeadCancerCells = Val[Double]
+
+val launch = List(
+    "while [ count BlockedApoCancerCells + count EarlyApoCancerCells + count LateApoCancerCells + count NeedSignalCancerCells  > 0 and ticks < simulation-duration * 24 ] [ headless-go ]",
+    "outputs")
+            
+def modelTask(monoInit: Double, simuDur: Int) =
+//val modelTask =
+    NetLogo6Task(workDirectory / "CLL-multipleBreeds-ABM.nlogo3d", launch, embedWorkspace = false, seed = mySeed, switch3d = true) set(
+        (inputs, outputs) += mySeed,
+        inputs += simulationDuration mapped "simulation-duration",
+        inputs += zMax mapped "z-max",
+        inputs += coef mapped "coef",
+        inputs += nbCancerCellsInit mapped "nb-cancer-cells-init",
+        inputs += propMonocytesInit mapped "prop-monocytes-init",
+        inputs += propWorldFilledInit mapped "prop-world-filled-init",
+        inputs += propApoptoticInit mapped "prop-apoptotic-init",
+        inputs += blockedApoptosisThreshold mapped "BlockedApoptosisThreshold",
+        inputs += nLCThreshold mapped "NLCThreshold",
+        inputs += earlyApoThreshold mapped "EarlyApoThreshold",
+        inputs += lateApoThreshold mapped "LateApoThreshold",
+        inputs += deathThreshold mapped "DeathThreshold",
+        inputs += survivalDecayThreshold mapped "SurvivalDecayThreshold",
+  
+        outputs += nbCancerCellsInit,
+        outputs += propMonocytesInit,
+        outputs += nbNeedSignalCancerCells mapped "nb-NeedSignalCancerCells",
+        outputs += nbBlockedApoCancerCells mapped "nb-BlockedApoCancerCells",
+        outputs += nbEarlyApoCancerCells mapped "nb-EarlyApoCancerCells",
+        outputs += nbLateApoCancerCells mapped "nb-LateApoCancerCells",
+        outputs += nbMonocytes mapped "nb-Monocytes",
+        outputs += nbNurseLikeCells mapped "nb-NurseLikeCells",
+        outputs += nbDeadCancerCells mapped "nb-DeadCancerCells",
+  
+        //Default values. Can be removed if OpenMOLE Vals are set by values coming from the workflow
+        // mySeed := 12,
+        simulationDuration := simuDur,
+        zMax := 1,
+        coef := 4,
+        nbCancerCellsInit := 2500,
+        propMonocytesInit := monoInit,
+        propWorldFilledInit := 85.5,
+        propApoptoticInit := 6,
+        blockedApoptosisThreshold := 1,
+        earlyApoThreshold := 150,
+        lateApoThreshold := 200,
+        deathThreshold := 250,
+        nLCThreshold := 1000,
+        survivalDecayThreshold := 1
+    )
+
+modelTask(1.0, 13) hook display
+// modelTask on ifb hook(workDirectory / "test.csv")
+
+Replication(
+  evaluation = modelTask(1.0, 13),
+  seed = mySeed,
+  replications = 10
+) hook (workDirectory / "test_seed_ABM.csv", includeSeed = true)
