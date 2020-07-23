@@ -46,19 +46,19 @@ patches-own [
 ]
 
 NeedSignalCancerCells-own[
-  Chemical_B ;; accumulated apoptotic factors from intrinsic and extrinsic apoptosis pathways
+  Life ;; accumulated apoptotic factors from intrinsic and extrinsic apoptosis pathways
 ]
 
 BlockedApoCancerCells-own[
-  Chemical_B
+  Life
 ]
 
 LateApoCancerCells-own[
-  Chemical_B
+  Life
 ]
 
 DeadCancerCells-own[
-  Chemical_B
+  Life
 ]
 
 Monocytes-own[
@@ -80,8 +80,8 @@ Phagocytes-own[
 to setup
   clear-all
   reset-ticks
-  ;;let seed 42
-  set mySeed behaviorspace-run-number * random 42
+  let seed 42
+  ;;set mySeed behaviorspace-run-number * random 42
   random-seed mySeed
   setup-Globals
   setup-World
@@ -101,20 +101,20 @@ to setup-Globals
   ;; Monocytes need to be in contact of enough NeedSignalCancerCells cancer cells [ie proportional to NLCThreshold] to increase their SignalStrength and eventually differentiate into NLCs
   set NLCThreshold gui-NLCThreshold
 
-  ;; NeedSignalCancerCells turn into LateApoCancerCells when they reach a specific Chemical_B apoptotic value [ie LateApoThreshold]
-  set LateApoThreshold gui-LateApoThreshold
+  ;; NeedSignalCancerCells turn into LateApoCancerCells when they reach a specific Life apoptotic value [ie LateApoThreshold]
+;;  set LateApoThreshold gui-LateApoThreshold
 
-  ;; How fast B CLL cells die. ie how fast they accumulate apoptotic inner signals, namely Chemical_B
+  ;; How fast B CLL cells die. ie how fast they accumulate apoptotic inner signals, namely Life
   set death_rate gui-death_rate
 
-  ;; How long should apoptosis last?
-  set apoptosisDuration gui-apoptosisDuration
+;  ;; How long should apoptosis last?
+;  set apoptosisDuration gui-apoptosisDuration
 
   ;; How long should cell disintegration/fragmentation last once the B CLL cell has died?
   set disintegrationDuration gui-disintegrationDuration
 
   ;; period for Macrophages phagocytosis activity. This is an attempt to encore circadian rythm in macrophages' phagocytosis efficacy.
-  set Period gui-Period
+  ;;set Period gui-Period
 
   ;; NeedSignalCancerCells can collect Chemical_A from the TME only if a specific amount of it is available on the patch they are located on (ie as long as they have sufficient amount of Chemical_A around them)
   ;; The same way, BlockedApoCancerCells can remain in their state as long as some specific amount of Chemical_A is on the patch they are located on (ie as long as they have sufficient amount of Chemical_A around them)
@@ -122,11 +122,11 @@ to setup-Globals
   ;; Proportionality should be parameterized
   set SurvivalDecayThreshold gui-NLCThreshold / 40
 
-  ;; LateApoCancerCells turn into DeadCancerCells when they reach a specific Chemical_B apoptotic value [ie gui-LateApoThreshold + gui-apoptosisDuration]
-  set DeathThreshold gui-LateApoThreshold + gui-apoptosisDuration
+  ;; LateApoCancerCells turn into DeadCancerCells when they reach a specific Life apoptotic value [ie gui-LateApoThreshold + gui-apoptosisDuration]
+  set DeathThreshold gui-DeathThreshold ;;- gui-apoptosisDuration
 
-  ;; After how much accumulated Chemical_B will a B-CLL cell die?
-  set DisintegrationThreshold gui-LateApoThreshold + gui-apoptosisDuration + gui-disintegrationDuration
+  ;; After how much accumulated Life will a B-CLL cell die?
+  set DisintegrationThreshold gui-DeathThreshold - gui-disintegrationDuration ;;- gui-apoptosisDuration
 
 end
 
@@ -175,7 +175,7 @@ end
 
 to setup-NeedSignalCancerCells
   ask NeedSignalCancerCells [
-    set Chemical_B random-float (LateApoThreshold / 2)
+  set Life random-float (BlockedApoptosisThreshold - BlockedApoptosisThreshold / 2)
     set color red
     set shape "default"
     set size 1
@@ -185,7 +185,7 @@ to setup-NeedSignalCancerCells
   ask n-of (prop-apoptotic-init * nb-cancer-cells-init / 100) NeedSignalCancerCells
   [
   set breed LateApoCancerCells
-    set Chemical_B random-float (( DeathThreshold - LateApoThreshold) / 2)
+    set Life random-float ((DeathThreshold - LateApoThreshold) + (DeathThreshold - LateApoThreshold) / 2)
     set color yellow
     set shape "default"
   ]
@@ -207,7 +207,7 @@ end
 
 to-report getchemBMean
   let CancerCells (turtle-set (LateApoCancerCells) (NeedSignalCancerCells) (BlockedApoCancerCells))
-  report mean sort [Chemical_B] of CancerCells
+  report mean sort [Life] of CancerCells
 end
 
 to-report getSignalStrengthMean
@@ -384,42 +384,42 @@ to update-chemicals
 
   ;; Patches actions
   diffuse chemical_A (diffusion-rate / 100)
-  ask patches
-  [
-    set chemical_A chemical_A * (100 - degradation-rate) / 100  ;; slowly evaporate chemical_A
-    recolor-patch
-  ]
+;  ask patches
+;  [
+;    ;set chemical_A chemical_A * (100 - degradation-rate) / 100  ;; slowly evaporate chemical_A
+;    recolor-patch
+;  ]
 
   ;; NeedSignalCancerCells actions
   ask NeedSignalCancerCells
   [
-    ifelse ( [Chemical_A] of patch-here > SurvivalDecayThreshold) ;; This threshold seems to influence a lot the second dip, so it might also need to be parametrized.
+    ifelse ( [Chemical_A] of patch-here > 1);; SurvivalDecayRate) ;; This threshold seems to influence a lot the second dip, so it might also need to be parametrized.
     [
-      ;; decrease Chemical_B via the absorption of Chemical_A which increases survival
+      ;; decrease Life via the absorption of Chemical_A which increases survival
       ;; 1/10 is a rate that should be parametrized
-      set Chemical_B Chemical_B - Chemical_A / 10
+      set Life Life + 1
       ;; Substract the Chemical_A from the patch if its absorbed by the B cell
-      set Chemical_A Chemical_A - Chemical_A / 10
+      set Chemical_A Chemical_A - 1
 
     ]
-    [set Chemical_B Chemical_B * death_rate]
+    [set Life Life * death_rate]
   ]
 
   ;; BlockedApoCancerCells actions
   ask BlockedApoCancerCells
   [
-    ;; BlockedApoCancerCells are let still until Chemical_A is not enough on patches, then they go back increasing their Chemical_B
-    if ( [Chemical_A] of patch-here <= SurvivalDecayThreshold )
+    ;; BlockedApoCancerCells are let still until Chemical_A is not enough on patches, then they go back increasing their Life
+    if ( [Chemical_A] of patch-here < 1); SurvivalDecayThreshold )
 
-    ;, This Chemical_B update has been arbitrarily chosen.
-    ;; I think i set it this way, as a way to increase Chemical_B with the same amount than what the B-CLL cells would have needed to remain in BlockedApo state.
-    ;;[ set Chemical_B Chemical_B + SurvivalDecayThreshold - [Chemical_A] of patch-here ]
-    [ set Chemical_B Chemical_B  * death_rate]
+    ;, This Life update has been arbitrarily chosen.
+    ;; I think i set it this way, as a way to increase Life with the same amount than what the B-CLL cells would have needed to remain in BlockedApo state.
+    ;;[ set Life Life + SurvivalDecayThreshold - [Chemical_A] of patch-here ]
+    [ set Life Life  * death_rate]
   ]
 
   ;; LateApoCancerCells actions
   ask LateApoCancerCells
-  [ set Chemical_B Chemical_B * death_rate ]
+  [ set Life Life * death_rate ]
 
   ;; Monocytes actions
   ask Monocytes
@@ -436,7 +436,7 @@ to update-chemicals
       if (SignalStrength < NLCThreshold)
       [
         set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
-        set Chemical_A Chemical_A + SignalStrength / 10 ;; 1/10 to parameterize
+        set Chemical_A Chemical_A + 1 ;; 1/10 to parameterize
       ]
     ]
     [ set SignalStrength SignalStrength - SignalStrength / 10 ] ;; 1/10 to parameterize
@@ -457,9 +457,15 @@ to update-breeds
   ;; DeadCancerCells
   ask DeadCancerCells
   [
-    ifelse ( Chemical_B >= DisintegrationThreshold )
+    ifelse ( Life <= DisintegrationThreshold )
     [ die ]
-    [ set Chemical_B Chemical_B * death_rate ]
+    [
+      ;;set probaDie = abs (Life - DisintegrationThreshold) ;;( |0 - 20| = 20, random 100 < 20 = 20/100
+      ;;if ( random 100 < probaDie ) :
+      ;[
+        set Life Life * death_rate
+      ;]
+    ]
 
   ]
 
@@ -467,7 +473,7 @@ to update-breeds
   ;; NeedSignalCancerCells
   ask NeedSignalCancerCells
   [
-    if ( Chemical_B >= LateApoThreshold )
+    if ( Life <= 0 )
     [
       ;; change from NeedSignalCancerCell to LateApoCancerCell
       set breed LateApoCancerCells
@@ -475,7 +481,7 @@ to update-breeds
       set shape "default"
     ]
 
-    if ( Chemical_B <= BlockedApoptosisThreshold and any? NurseLikeCells-on neighbors )
+    if ( Life >= BlockedApoptosisThreshold and any? NurseLikeCells-on neighbors )
     [
       ;; change from NeedSignalCancerCell to BlockedApoCancerCell
       set breed BlockedApoCancerCells
@@ -487,7 +493,7 @@ to update-breeds
   ;; LateApoCancerCells
   ask LateApoCancerCells
   [
-    if ( Chemical_B >= DeathThreshold )
+    if ( Life <= DeathThreshold )
     [
       ;; change from LateApoCancerCell to DeadCancerCell
       set breed DeadCancerCells
@@ -499,12 +505,12 @@ to update-breeds
   ;; BlockedApoCancerCells
   ask BlockedApoCancerCells
   [
-    if ( Chemical_B > BlockedApoptosisThreshold )
+    if ( Life < BlockedApoptosisThreshold )
 
       [
         ;; change from BlockedApoCancerCell to NeedSignalCancerCell
         set breed NeedSignalCancerCells
-        set Chemical_B LateApoThreshold - LateApoThreshold / 2 ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
+        set Life 0 - DeathThreshold + DeathThreshold / 2 ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
         set color red
         set shape "default"
       ]
@@ -761,7 +767,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-2.0
+0.0
 1
 0
 Number
@@ -853,7 +859,7 @@ INPUTBOX
 74
 324
 gui-NLCThreshold
-1500.0
+100.0
 1
 0
 Number
@@ -864,7 +870,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-50.0
+2.0
 1
 0
 Number
@@ -905,8 +911,8 @@ INPUTBOX
 205
 176
 265
-gui-LateApoThreshold
-80.0
+gui-DeathThreshold
+-8.0
 1
 0
 Number
@@ -986,7 +992,7 @@ true
 false
 "" ""
 PENS
-"Chemical_B" 1.0 0 -2674135 true "" "plot\n(sum [Chemical_B] of NeedSignalCancerCells)\n\n/ \n(\ncount NeedSignalCancerCells\n)"
+"Life" 1.0 0 -7500403 true "" "plot (sum [Life] of NeedSignalCancerCells / count NeedSignalCancerCells)"
 
 PLOT
 353
@@ -1004,7 +1010,7 @@ true
 false
 "" ""
 PENS
-"Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Chemical_B] of BlockedApoCancerCells / count BlockedApoCancerCells)"
+"Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Life] of BlockedApoCancerCells / count BlockedApoCancerCells)"
 
 PLOT
 686
@@ -1022,7 +1028,7 @@ true
 false
 "" ""
 PENS
-"Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Chemical_B] of LateApoCancerCells / count LateApoCancerCells )"
+"Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Life] of LateApoCancerCells / count LateApoCancerCells )"
 
 PLOT
 915
@@ -1150,17 +1156,6 @@ count NeedSignalCancerCells
 1
 11
 
-INPUTBOX
-270
-27
-329
-87
-gui-Period
-24.0
-1
-0
-Number
-
 PLOT
 856
 310
@@ -1209,10 +1204,10 @@ getSignalStrengthMean
 11
 
 MONITOR
-202
-559
-417
-604
+11
+687
+226
+732
 getSignalStrengthStandardDeviation
 getSignalStrengthStandardDeviation
 17
@@ -1254,18 +1249,7 @@ INPUTBOX
 263
 266
 gui-death_rate
-1.0075
-1
-0
-Number
-
-INPUTBOX
-263
-205
-381
-265
-gui-apoptosisDuration
-24.0
+0.993
 1
 0
 Number
@@ -1277,17 +1261,6 @@ INPUTBOX
 326
 gui-disintegrationDuration
 20.0
-1
-0
-Number
-
-INPUTBOX
-202
-26
-269
-86
-gui-alpha
-0.0
 1
 0
 Number
