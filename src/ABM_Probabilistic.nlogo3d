@@ -402,7 +402,7 @@ to update-chemicals
       set Chemical_A Chemical_A - 1
 
     ]
-    [set Life Life * death_rate]
+    [set Life Life - 1]; * death_rate]
   ]
 
   ;; BlockedApoCancerCells actions
@@ -414,12 +414,16 @@ to update-chemicals
     ;, This Life update has been arbitrarily chosen.
     ;; I think i set it this way, as a way to increase Life with the same amount than what the B-CLL cells would have needed to remain in BlockedApo state.
     ;;[ set Life Life + SurvivalDecayThreshold - [Chemical_A] of patch-here ]
-    [ set Life Life  * death_rate]
+    [ set Life Life - 1];  * death_rate]
   ]
 
   ;; LateApoCancerCells actions
   ask LateApoCancerCells
-  [ set Life Life * death_rate ]
+  [ set Life Life - 1]; / death_rate ]
+
+  ;; DeadCancerCells actions
+  ask DeadCancerCells
+  [ set Life Life - 1]; / death_rate ]
 
   ;; Monocytes actions
   ask Monocytes
@@ -463,7 +467,7 @@ to update-breeds
       ;;set probaDie = abs (Life - DisintegrationThreshold) ;;( |0 - 20| = 20, random 100 < 20 = 20/100
       ;;if ( random 100 < probaDie ) :
       ;[
-        set Life Life * death_rate
+      set Life Life - 1 ;* death_rate
       ;]
     ]
 
@@ -870,7 +874,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-2.0
+1000.0
 1
 0
 Number
@@ -912,7 +916,7 @@ INPUTBOX
 176
 265
 gui-DeathThreshold
--8.0
+-1000.0
 1
 0
 Number
