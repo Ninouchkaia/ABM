@@ -185,7 +185,8 @@ to setup-NeedSignalCancerCells
   ask n-of (prop-apoptotic-init * nb-cancer-cells-init / 100) NeedSignalCancerCells
   [
   set breed LateApoCancerCells
-    set Life random-float ((DeathThreshold - LateApoThreshold) + (DeathThreshold - LateApoThreshold) / 2)
+    ;set Life random-float ((DeathThreshold - LateApoThreshold) + (DeathThreshold - LateApoThreshold) / 2)
+    set Life random-float ((DeathThreshold) - (DeathThreshold) / 2)
     set color yellow
     set shape "default"
   ]
@@ -863,7 +864,7 @@ INPUTBOX
 74
 324
 gui-NLCThreshold
-100.0
+1500.0
 1
 0
 Number
@@ -916,7 +917,7 @@ INPUTBOX
 176
 265
 gui-DeathThreshold
--1000.0
+-100.0
 1
 0
 Number
@@ -930,7 +931,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-1.0
+0.0
 1
 1
 NIL
@@ -945,7 +946,7 @@ degradation-rate
 degradation-rate
 0
 100
-1.0
+0.0
 1
 1
 NIL
@@ -956,7 +957,7 @@ PLOT
 194
 660
 314
-Chemicals on patches
+Chemokine on patches
 time
 quantity
 0.0
@@ -972,9 +973,9 @@ PENS
 MONITOR
 69
 416
-193
+240
 461
-Chemical_A on patches
+Chemokine on patches (avg)
 (sum ([Chemical_A] of patches with [not forbidden]) )/ (count patches with [not forbidden])
 2
 1
@@ -987,7 +988,7 @@ PLOT
 481
 in NeedSignalCancerCells
 time
-Chemical
+Life
 0.0
 10.0
 0.0
@@ -1005,7 +1006,7 @@ PLOT
 650
 in BlockedApoCancerCells
 time
-Chemical
+Life
 0.0
 10.0
 0.0
@@ -1023,7 +1024,7 @@ PLOT
 479
 in LateApoCancerCells
 time
-Chemical
+Life
 0.0
 10.0
 0.0
@@ -1072,17 +1073,6 @@ PENS
 "irreversible" 1.0 0 -2674135 true "" "plot count DeadCancerCells + count LateApoCancerCells"
 "dead" 1.0 0 -16777216 true "" "plot count DeadCancerCells"
 
-MONITOR
-193
-415
-317
-460
-Phagocytosis Efficiency
-getPhagoEfficiency
-17
-1
-11
-
 PLOT
 334
 660
@@ -1100,24 +1090,6 @@ true
 "" ""
 PENS
 "dead + late" 1.0 0 -16777216 true "" "plot count DeadCancerCells + count LateApoCancerCells"
-
-PLOT
-0
-507
-200
-657
-getPhagoEfficiency
-NIL
-NIL
-0.0
-10.0
-0.0
-1.0
-true
-true
-"" ""
-PENS
-"default" 1.0 0 -16777216 true "" "plot getPhagoEfficiency"
 
 PLOT
 792
@@ -1264,7 +1236,7 @@ INPUTBOX
 399
 326
 gui-disintegrationDuration
-20.0
+120.0
 1
 0
 Number
@@ -1636,26 +1608,32 @@ NetLogo 3D 6.1.0
     <metric>getViability</metric>
     <metric>getRemainingCellRatio</metric>
   </experiment>
-  <experiment name="NinaExploInAbsenceOfMonocytes" repetitions="3" runMetricsEveryStep="false">
+  <experiment name="NinaExploInAbsenceOfMonocytes" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="216"/>
+    <timeLimit steps="312"/>
     <metric>getViability</metric>
     <metric>getRemainingCellRatio</metric>
     <metric>getSeed</metric>
-    <enumeratedValueSet variable="gui-death_rate">
-      <value value="1.001"/>
-      <value value="1.007"/>
-      <value value="1.01"/>
-      <value value="1.015"/>
-      <value value="1.02"/>
+    <enumeratedValueSet variable="gui-DeathThreshold">
+      <value value="-1000"/>
+      <value value="-800"/>
+      <value value="-600"/>
+      <value value="-400"/>
+      <value value="-200"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="gui-lateApoThreshold">
-      <value value="36"/>
-      <value value="48"/>
-      <value value="72"/>
-      <value value="96"/>
-      <value value="120"/>
+    <enumeratedValueSet variable="gui-BlockedApoptosisThreshold">
+      <value value="200"/>
+      <value value="400"/>
+      <value value="600"/>
+      <value value="800"/>
+      <value value="1000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="gui-disintegrationDuration">
+      <value value="20"/>
+      <value value="30"/>
+      <value value="50"/>
+      <value value="100"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
