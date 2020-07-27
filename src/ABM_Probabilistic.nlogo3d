@@ -28,7 +28,6 @@ globals [
   prop-monocytes-init
   prop-apoptotic-init
   BlockedApoptosisThreshold
-  LateApoThreshold
   DeathThreshold
   NLCThreshold
   SurvivalDecayThreshold
@@ -175,7 +174,7 @@ end
 
 to setup-NeedSignalCancerCells
   ask NeedSignalCancerCells [
-  set Life random-float (BlockedApoptosisThreshold - BlockedApoptosisThreshold / 2)
+  set Life random-float (BlockedApoptosisThreshold / 2)
     set color red
     set shape "default"
     set size 1
@@ -186,7 +185,7 @@ to setup-NeedSignalCancerCells
   [
   set breed LateApoCancerCells
     ;set Life random-float ((DeathThreshold - LateApoThreshold) + (DeathThreshold - LateApoThreshold) / 2)
-    set Life random-float ((DeathThreshold) - (DeathThreshold) / 2)
+    set Life random-float (DeathThreshold / 2)
     set color yellow
     set shape "default"
   ]
@@ -917,7 +916,7 @@ INPUTBOX
 176
 265
 gui-DeathThreshold
--100.0
+-200.0
 1
 0
 Number
@@ -1236,7 +1235,7 @@ INPUTBOX
 399
 326
 gui-disintegrationDuration
-120.0
+96.0
 1
 0
 Number
@@ -1608,32 +1607,29 @@ NetLogo 3D 6.1.0
     <metric>getViability</metric>
     <metric>getRemainingCellRatio</metric>
   </experiment>
-  <experiment name="NinaExploInAbsenceOfMonocytes" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="NinaExploInAbsenceOfMonocytes" repetitions="1" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="312"/>
+    <timeLimit steps="216"/>
     <metric>getViability</metric>
     <metric>getRemainingCellRatio</metric>
     <metric>getSeed</metric>
     <enumeratedValueSet variable="gui-DeathThreshold">
       <value value="-1000"/>
-      <value value="-800"/>
-      <value value="-600"/>
-      <value value="-400"/>
+      <value value="-500"/>
       <value value="-200"/>
+      <value value="-100"/>
+      <value value="-50"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="gui-BlockedApoptosisThreshold">
-      <value value="200"/>
-      <value value="400"/>
       <value value="600"/>
       <value value="800"/>
       <value value="1000"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="gui-disintegrationDuration">
-      <value value="20"/>
-      <value value="30"/>
-      <value value="50"/>
-      <value value="100"/>
+      <value value="72"/>
+      <value value="96"/>
+      <value value="120"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
