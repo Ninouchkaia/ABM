@@ -112,15 +112,6 @@ to setup-Globals
   ;; How long should cell disintegration/fragmentation last once the B CLL cell has died?
   set disintegrationDuration gui-disintegrationDuration
 
-  ;; period for Macrophages phagocytosis activity. This is an attempt to encore circadian rythm in macrophages' phagocytosis efficacy.
-  ;;set Period gui-Period
-
-  ;; NeedSignalCancerCells can collect Chemical_A from the TME only if a specific amount of it is available on the patch they are located on (ie as long as they have sufficient amount of Chemical_A around them)
-  ;; The same way, BlockedApoCancerCells can remain in their state as long as some specific amount of Chemical_A is on the patch they are located on (ie as long as they have sufficient amount of Chemical_A around them)
-  ;; This amount is directly proportional to how much the NLCs are able to secrete Chemical_A, ie proportional to the NLC's SignalStrength which is ~ equivalent to NLCThreshold.
-  ;; Proportionality should be parameterized
-  set SurvivalDecayThreshold gui-NLCThreshold / 40
-
   ;; LateApoCancerCells turn into DeadCancerCells when they reach a specific Life apoptotic value [ie gui-LateApoThreshold + gui-apoptosisDuration]
   set DeathThreshold gui-DeathThreshold ;;- gui-apoptosisDuration
 
@@ -157,7 +148,7 @@ end
 
 to recolor-patch  ;; patch procedure to visualize Chemical_A dispersion in the TME. It's only applicable when the world is in 2D, ie z-max set to 0 in setup-World
   ;; scale color to show chemical concentration
-  ;;set pcolor scale-color white Chemical_A 0.1 60
+  ;set pcolor scale-color white Chemical_A 0.1 1;60
 end
 
 to setup-Monocytes
@@ -174,7 +165,7 @@ end
 
 to setup-NeedSignalCancerCells
   ask NeedSignalCancerCells [
-  set Life random-float (BlockedApoptosisThreshold / 2)
+  set Life random-float 500; (BlockedApoptosisThreshold / 2)
     set color red
     set shape "default"
     set size 1
@@ -234,48 +225,15 @@ to-report isLocalPopulationMostlyNeedSignal ;; in-radius 4 has been arbitrarily 
   report count NeedSignal >= 1.5 * count OtherCells ;; the 1.5 value has been arbitrarily chosen
 end
 
-to-report getPhagoEfficiency
-  ;;report ( - sin ( ( 15 * ticks ) + 90 ) + 1 ) * 3 ;; period 24h
-  ;;report ( - sin ( ( 7.5 * ticks ) + 90 ) + 1 ) * 3 ;; period 48h
-  ;;report ( - sin ( ( 5 * ticks ) + 90 ) + 1 ) * 3 ;; period 72h
-  ;report ( - sin ( ( 180 / Period * ticks ) + 90 ) + 1 ) * 3 ;; period gui
-  report 1 ;; when no circadian rhythm is at play
-end
-
 to phagocyte_Monocyte ;; phagocytosis for Monocytes
     ;; look for dead or late apoptotic cells in the neighbors
     let debris (turtle-set (DeadCancerCells-on neighbors) (LateApoCancerCells-on neighbors))
     ifelse (any? debris)
     ;; phagocyte
   [
-    ;;let MonocyteEff getPhagoEfficiency ;;/ 2
-    ;;ifelse (count debris <= MonocyteEff)
-    ;;[ask n-of (count debris / 2) debris [die]]
-    ;;[ask n-of (MonocyteEff) debris [die]]
-
     ask one-of debris [die] ;; monocytes can eat debris one by one, there is no change in their phagocytosis efficiency with time.
   ]
     [ move 3 nobody ]
-end
-
-to phagocyte_NurseLikeCell ;; phagocytosis for NLCs
-  ;; look for dead or late apoptotic cells in the neighbors
-  let debris (turtle-set (DeadCancerCells-on neighbors) (LateApoCancerCells-on neighbors))
-  ifelse (any? debris)
-  ;; phagocyte
-  [
-;    ifelse (count debris <= getPhagoEfficiency)
-;    [ask n-of count debris debris [die]]
-;    [ask n-of (getPhagoEfficiency) debris [die]]
-
-    ask one-of debris [die] ;; NLCs can eat debris one by one, there is no change in their phagocytosis efficiency with time.
-
-  ]
-  [ if (random 100 < 50) [ move 1 nobody ] ] ;; NLCs don't move at each time step, and if they move, they move less far than monocytes do.
-end
-
-to phagocyte_Phagocyte ;; phagocytosis for M0. Same as phagocytosis for NLCs.
-  phagocyte_NurseLikeCell
 end
 
 to move [steps goal] ;; agent procedure
@@ -370,13 +328,10 @@ to update-positions
   ;; NurseLikeCells actions
   ask NurseLikeCells
   [
-    if (random 100 < 10) [phagocyte_NurseLikeCell] ;; low probability that NLC phagocytes
-    if (random 100 < 50) [ move 6 nobody ]
+    ifelse (random NLCThreshold <= SignalStrength)
+    [ move 2 nobody ]
+    [ phagocyte_Monocyte ]
   ]
-
-  ;; Phagocytes actions
-  ask Phagocytes
-  [ phagocyte_Phagocyte ]
 
 end
 
@@ -384,16 +339,16 @@ to update-chemicals
 
   ;; Patches actions
   diffuse chemical_A (diffusion-rate / 100)
-;  ask patches
-;  [
-;    ;set chemical_A chemical_A * (100 - degradation-rate) / 100  ;; slowly evaporate chemical_A
-;    recolor-patch
-;  ]
+  ask patches
+  [
+    ;set chemical_A chemical_A * (100 - degradation-rate) / 100  ;; slowly evaporate chemical_A
+    recolor-patch
+  ]
 
   ;; NeedSignalCancerCells actions
   ask NeedSignalCancerCells
   [
-    ifelse ( [Chemical_A] of patch-here > 1);; SurvivalDecayRate) ;; This threshold seems to influence a lot the second dip, so it might also need to be parametrized.
+    ifelse ( [Chemical_A] of patch-here >= 1);; SurvivalDecayRate) ;; This threshold seems to influence a lot the second dip, so it might also need to be parametrized.
     [
       ;; decrease Life via the absorption of Chemical_A which increases survival
       ;; 1/10 is a rate that should be parametrized
@@ -432,27 +387,38 @@ to update-chemicals
     [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors) ]
   ]
 
+;  ;; NurseLikeCells actions
+;  ask NurseLikeCells
+;  [
+;    ifelse (random NLCThreshold >= SignalStrength)
+;    [
+;      ifelse (isLocalPopulationMostlyNeedSignal)
+;      [
+;        if (SignalStrength < NLCThreshold)
+;        [
+;          set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
+;          set Chemical_A Chemical_A + 1 ;; 1/10 to parameterize
+;        ]
+;      ]
+;      [ set SignalStrength SignalStrength - 1];SignalStrength / 10 ] ;; 1/10 to parameterize
+;    ]
+;    [
+;      if ( any? NeedSignalCancerCells-on neighbors or any? BlockedApoCancerCells-on neighbors)
+;      [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors) ]
+;    ]
+;  ]
+
   ;; NurseLikeCells actions
   ask NurseLikeCells
   [
-    ifelse (isLocalPopulationMostlyNeedSignal)
+    ifelse (random NLCThreshold <= SignalStrength)
     [
-      if (SignalStrength < NLCThreshold)
-      [
-        set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
-        set Chemical_A Chemical_A + 1 ;; 1/10 to parameterize
-      ]
+      set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
+      set Chemical_A Chemical_A + 1 ;; 1/10 to parameterize
     ]
-    [ set SignalStrength SignalStrength - SignalStrength / 10 ] ;; 1/10 to parameterize
+    [ set SignalStrength SignalStrength - 1];SignalStrength / 10 ] ;; 1/10 to parameterize
   ]
 
-  ;; Phagocytes actions (M0)
-  ask Phagocytes
-  [
-    ifelse (isLocalPopulationMostlyNeedSignal)
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) ]
-    [ set SignalStrength SignalStrength - SignalStrength / 10 ] ;; 1/10 to parameterize
-  ]
 
 end
 
@@ -489,6 +455,7 @@ to update-breeds
     [
       ;; change from NeedSignalCancerCell to BlockedApoCancerCell
       set breed BlockedApoCancerCells
+      set Life random-float (BlockedApoptosisThreshold / 2)
       set color pink + 2.5
       set shape "default"
     ]
@@ -514,7 +481,7 @@ to update-breeds
       [
         ;; change from BlockedApoCancerCell to NeedSignalCancerCell
         set breed NeedSignalCancerCells
-        set Life 0 - DeathThreshold + DeathThreshold / 2 ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
+        set Life random-float (BlockedApoptosisThreshold / 2) ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
         set color red
         set shape "default"
       ]
@@ -548,19 +515,6 @@ to update-breeds
 ;    ]
 ;  ]
 
-  ;; Phagocytes / M0
-  ask Phagocytes
-  [
-    if (SignalStrength >= NLCThreshold and isLocalPopulationMostlyNeedSignal)
-    [
-      ;; change from Phagocytes to NurseLikeCells
-      set breed NurseLikeCells
-      set color green
-      set shape "pentagon"
-      set size 2
-      set SignalStrength SignalStrength
-    ]
-  ]
 
 end
 @#$#@#$#@
@@ -771,7 +725,7 @@ INPUTBOX
 169
 205
 gui-prop-monocytes-init
-0.0
+2.0
 1
 0
 Number
@@ -874,7 +828,7 @@ INPUTBOX
 329
 207
 gui-BlockedApoptosisThreshold
-1000.0
+0.0
 1
 0
 Number
@@ -930,7 +884,7 @@ diffusion-rate
 diffusion-rate
 0
 100
-0.0
+1.0
 1
 1
 NIL
