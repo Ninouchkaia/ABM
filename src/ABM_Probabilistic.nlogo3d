@@ -27,16 +27,17 @@ globals [
   nb-cancer-cells-init
   prop-monocytes-init
   prop-apoptotic-init
+  LifeInit
   BlockedApoptosisThreshold
   DeathThreshold
   NLCThreshold
   SurvivalDecayThreshold
-  death_rate
   apoptosisDuration
   DisintegrationThreshold
   disintegrationDuration
   Period
   mySeed
+  alpha
 ]
 
 patches-own [
@@ -94,20 +95,13 @@ to setup-Globals
   set prop-monocytes-init gui-prop-monocytes-init
   set prop-apoptotic-init gui-prop-apoptotic-init
 
+  set LifeInit gui-LifeInit
+
   ;; NeedSignalCancerCells need to accumulate some amount [ie BlockedApoptosisThreshold] of the anti-apoptotic signal [Chemical_A] from NLCs to convert to the BlockedApoptosis state
   set BlockedApoptosisThreshold gui-BlockedApoptosisThreshold
 
   ;; Monocytes need to be in contact of enough NeedSignalCancerCells cancer cells [ie proportional to NLCThreshold] to increase their SignalStrength and eventually differentiate into NLCs
   set NLCThreshold gui-NLCThreshold
-
-  ;; NeedSignalCancerCells turn into LateApoCancerCells when they reach a specific Life apoptotic value [ie LateApoThreshold]
-;;  set LateApoThreshold gui-LateApoThreshold
-
-  ;; How fast B CLL cells die. ie how fast they accumulate apoptotic inner signals, namely Life
-  set death_rate gui-death_rate
-
-;  ;; How long should apoptosis last?
-;  set apoptosisDuration gui-apoptosisDuration
 
   ;; How long should cell disintegration/fragmentation last once the B CLL cell has died?
   set disintegrationDuration gui-disintegrationDuration
@@ -117,6 +111,8 @@ to setup-Globals
 
   ;; After how much accumulated Life will a B-CLL cell die?
   set DisintegrationThreshold gui-DeathThreshold - gui-disintegrationDuration ;;- gui-apoptosisDuration
+
+  set alpha gui-alpha
 
 end
 
@@ -165,7 +161,7 @@ end
 
 to setup-NeedSignalCancerCells
   ask NeedSignalCancerCells [
-  set Life random-float 500; (BlockedApoptosisThreshold / 2)
+  set Life random-float LifeInit
     set color red
     set shape "default"
     set size 1
@@ -340,45 +336,32 @@ to update-chemicals
   ;; Patches actions
   diffuse chemical_A (diffusion-rate / 100)
   ask patches
-  [
-    ;set chemical_A chemical_A * (100 - degradation-rate) / 100  ;; slowly evaporate chemical_A
-    recolor-patch
-  ]
+  [ recolor-patch ]
 
   ;; NeedSignalCancerCells actions
   ask NeedSignalCancerCells
   [
     ifelse ( [Chemical_A] of patch-here >= 1);; SurvivalDecayRate) ;; This threshold seems to influence a lot the second dip, so it might also need to be parametrized.
     [
-      ;; decrease Life via the absorption of Chemical_A which increases survival
-      ;; 1/10 is a rate that should be parametrized
-      set Life Life + 1
-      ;; Substract the Chemical_A from the patch if its absorbed by the B cell
+      set Life Life + alpha
       set Chemical_A Chemical_A - 1
-
     ]
-    [set Life Life - 1]; * death_rate]
+    [set Life Life - 1]
   ]
 
   ;; BlockedApoCancerCells actions
   ask BlockedApoCancerCells
-  [
-    ;; BlockedApoCancerCells are let still until Chemical_A is not enough on patches, then they go back increasing their Life
-    if ( [Chemical_A] of patch-here < 1); SurvivalDecayThreshold )
-
-    ;, This Life update has been arbitrarily chosen.
-    ;; I think i set it this way, as a way to increase Life with the same amount than what the B-CLL cells would have needed to remain in BlockedApo state.
-    ;;[ set Life Life + SurvivalDecayThreshold - [Chemical_A] of patch-here ]
-    [ set Life Life - 1];  * death_rate]
-  ]
+  ;[ if ( [Chemical_A] of patch-here < 1)
+    [ set Life Life - 1]
+  ;]
 
   ;; LateApoCancerCells actions
   ask LateApoCancerCells
-  [ set Life Life - 1]; / death_rate ]
+  [ set Life Life - 1]
 
   ;; DeadCancerCells actions
   ask DeadCancerCells
-  [ set Life Life - 1]; / death_rate ]
+  [ set Life Life - 1]
 
   ;; Monocytes actions
   ask Monocytes
@@ -411,12 +394,16 @@ to update-chemicals
   ;; NurseLikeCells actions
   ask NurseLikeCells
   [
-    ifelse (random NLCThreshold <= SignalStrength)
+    ifelse (isLocalPopulationMostlyNeedSignal)
     [
-      set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)
-      set Chemical_A Chemical_A + 1 ;; 1/10 to parameterize
+      ifelse (random NLCThreshold <= SignalStrength) ;; the higher SignalStrength, the higher the probability
+      [set Chemical_A Chemical_A + 1] ;; profile NLC
+      [set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors)] ;; profile mono
     ]
-    [ set SignalStrength SignalStrength - 1];SignalStrength / 10 ] ;; 1/10 to parameterize
+    [
+      if (random NLCThreshold <= SignalStrength)
+      [ set SignalStrength SignalStrength - 1 ]
+    ]
   ]
 
 
@@ -455,7 +442,7 @@ to update-breeds
     [
       ;; change from NeedSignalCancerCell to BlockedApoCancerCell
       set breed BlockedApoCancerCells
-      set Life random-float (BlockedApoptosisThreshold / 2)
+      ;set Life random-float (BlockedApoptosisThreshold / 2)
       set color pink + 2.5
       set shape "default"
     ]
@@ -481,7 +468,7 @@ to update-breeds
       [
         ;; change from BlockedApoCancerCell to NeedSignalCancerCell
         set breed NeedSignalCancerCells
-        set Life random-float (BlockedApoptosisThreshold / 2) ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
+        ;set Life random-float (BlockedApoptosisThreshold / 2) ;; delay / refractory period, to avoid oscillatory change of state around BlockedApoptosisThreshold
         set color red
         set shape "default"
       ]
@@ -497,23 +484,23 @@ to update-breeds
       set color green
       set shape "pentagon"
       set size 2
-      set SignalStrength SignalStrength
+      ;set SignalStrength SignalStrength
     ]
   ]
 
   ;; NurseLikeCells
-;  ask NurseLikeCells
-;  [
-;    if ( SignalStrength < NLCThreshold / 10) ;; to be parameterized
-;    [
-;      ;; change from NurseLikeCells to Phagocytes (M0)
-;      set breed Phagocytes
-;      set color magenta
-;      set shape "pentagon"
-;      set size 2
-;      set SignalStrength 0
-;    ]
-;  ]
+  ask NurseLikeCells
+  [
+    if ( SignalStrength < NLCThreshold) ;; to be parameterized
+    [
+      ;; change from NurseLikeCells to Phagocytes (M0)
+      ;set breed Phagocytes
+      set color magenta
+      set shape "pentagon"
+      set size 2
+      ;set SignalStrength 0
+    ]
+  ]
 
 
 end
@@ -565,10 +552,10 @@ NIL
 1
 
 INPUTBOX
-8
-86
-169
-146
+0
+87
+52
+147
 gui-nb-cancer-cells-init
 2500.0
 1
@@ -675,10 +662,10 @@ count patches with [not forbidden]
 11
 
 PLOT
-514
-479
-1007
-659
+328
+10
+821
+190
 time series
 time
 nb of cells
@@ -709,10 +696,10 @@ count DeadCancerCells
 11
 
 MONITOR
-352
-484
-422
-529
+696
+195
+766
+240
 blocked-apo
 count BlockedApoCancerCells
 17
@@ -720,10 +707,10 @@ count BlockedApoCancerCells
 11
 
 INPUTBOX
-8
-145
-169
-205
+104
+87
+194
+147
 gui-prop-monocytes-init
 2.0
 1
@@ -731,12 +718,12 @@ gui-prop-monocytes-init
 Number
 
 INPUTBOX
-9
-204
-101
-264
+194
+87
+278
+147
 gui-prop-apoptotic-init
-6.0
+40.0
 1
 0
 Number
@@ -759,10 +746,10 @@ NIL
 1
 
 INPUTBOX
-168
-85
-329
-145
+51
+87
+104
+147
 gui-prop-world-filled-init
 85.5
 1
@@ -770,10 +757,10 @@ gui-prop-world-filled-init
 Number
 
 PLOT
-663
-195
-911
-315
+375
+359
+623
+479
 monocytes
 NIL
 NIL
@@ -790,10 +777,10 @@ PENS
 "phagocytes" 1.0 0 -7500403 true "" "plot count Phagocytes"
 
 MONITOR
-686
-317
-739
-362
+536
+196
+589
+241
 late-apo
 count LateApoCancerCells
 17
@@ -801,10 +788,10 @@ count LateApoCancerCells
 11
 
 MONITOR
-197
-732
-271
-777
+204
+528
+278
+573
 days
 ticks / 24
 1
@@ -812,23 +799,23 @@ ticks / 24
 11
 
 INPUTBOX
-12
+0
+204
+62
 264
-74
-324
 gui-NLCThreshold
-1500.0
+2000.0
 1
 0
 Number
 
 INPUTBOX
-168
-147
-329
-207
+151
+146
+248
+206
 gui-BlockedApoptosisThreshold
-0.0
+1000.0
 1
 0
 Number
@@ -865,21 +852,21 @@ Average Signal
 11
 
 INPUTBOX
-94
+69
+145
+151
 205
-176
-265
 gui-DeathThreshold
--200.0
+-250.0
 1
 0
 Number
 
 SLIDER
 75
-265
+205
 247
-298
+238
 diffusion-rate
 diffusion-rate
 0
@@ -890,26 +877,11 @@ diffusion-rate
 NIL
 HORIZONTAL
 
-SLIDER
-75
-296
-247
-329
-degradation-rate
-degradation-rate
-0
-100
-0.0
-1
-1
-NIL
-HORIZONTAL
-
 PLOT
-400
-194
-660
-314
+922
+237
+1219
+357
 Chemokine on patches
 time
 quantity
@@ -935,10 +907,10 @@ Chemokine on patches (avg)
 11
 
 PLOT
-351
-361
-511
-481
+375
+238
+535
+358
 in NeedSignalCancerCells
 time
 Life
@@ -953,10 +925,10 @@ PENS
 "Life" 1.0 0 -7500403 true "" "plot (sum [Life] of NeedSignalCancerCells / count NeedSignalCancerCells)"
 
 PLOT
-353
-530
-513
-650
+697
+241
+857
+361
 in BlockedApoCancerCells
 time
 Life
@@ -971,10 +943,10 @@ PENS
 "Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Life] of BlockedApoCancerCells / count BlockedApoCancerCells)"
 
 PLOT
-686
-359
-846
-479
+536
+238
+696
+358
 in LateApoCancerCells
 time
 Life
@@ -989,10 +961,10 @@ PENS
 "Chemical_B" 1.0 0 -2674135 true "" "plot (sum [Life] of LateApoCancerCells / count LateApoCancerCells )"
 
 PLOT
-915
-194
-1213
-314
+624
+358
+922
+478
 Average Signal Strength in Monocytes
 NIL
 NIL
@@ -1007,30 +979,10 @@ PENS
 "Signal in Monocytes" 1.0 0 -13345367 true "" "plot (sum ([SignalStrength] of Monocytes))/ (count Monocytes)"
 
 PLOT
-331
-10
-799
-190
-Living and Dead cells 
-time
-number
-0.0
-10.0
-0.0
-10.0
-true
-true
-"" ""
-PENS
-"reversible" 1.0 0 -15575016 true "" "plot count NeedSignalCancerCells + count BlockedApoCancerCells"
-"irreversible" 1.0 0 -2674135 true "" "plot count DeadCancerCells + count LateApoCancerCells"
-"dead" 1.0 0 -16777216 true "" "plot count DeadCancerCells"
-
-PLOT
-334
-660
-791
-810
+375
+480
+743
+692
 trypan
 NIL
 NIL
@@ -1045,10 +997,10 @@ PENS
 "dead + late" 1.0 0 -16777216 true "" "plot count DeadCancerCells + count LateApoCancerCells"
 
 PLOT
-792
-599
-1269
-811
+745
+480
+1222
+692
 viability 2
 time
 viability
@@ -1064,21 +1016,10 @@ PENS
 "viability dead" 1.0 0 -7500403 true "" "plot 100 - ((count DeadCancerCells) / (count DeadCancerCells + count LateApoCancerCells + count NeedSignalCancerCells + count BlockedApoCancerCells)) * 100"
 
 MONITOR
-253
-330
-320
-375
-Phagocytes
-count Phagocytes
-17
-1
-11
-
-MONITOR
-445
-315
-511
-360
+376
+193
+442
+238
 need-signal
 count NeedSignalCancerCells
 17
@@ -1086,28 +1027,10 @@ count NeedSignalCancerCells
 11
 
 PLOT
-856
-310
-1056
-460
-Signal Strength in Phagocytes
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"Signal in Phagocytes" 1.0 0 -5825686 true "" "plot (sum ([SignalStrength] of Phagocytes) )/ (count Phagocytes )"
-
-PLOT
-1056
-313
-1256
-463
+922
+357
+1219
+477
 Signal Strength in NLCs
 NIL
 NIL
@@ -1121,75 +1044,35 @@ false
 PENS
 "Signal in NLCs" 1.0 0 -13840069 true "" "plot ( sum ([SignalStrength] of NurseLikeCells))/ (count NurseLikeCells)"
 
-MONITOR
-201
-507
-343
-552
-getSignalStrengthMean
-getSignalStrengthMean
-17
-1
-11
-
-MONITOR
-11
-687
-226
-732
-getSignalStrengthStandardDeviation
-getSignalStrengthStandardDeviation
-17
-1
-11
-
-PLOT
-288
-644
-488
-794
-getSignalStrengthMean
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -16777216 true "" "plot getSignalStrengthMean"
-
-MONITOR
-227
-629
-324
-674
-getchemBMean
-getchemBMean
-17
-1
-11
-
 INPUTBOX
-176
+248
 206
-263
+370
 266
-gui-death_rate
-0.993
+gui-disintegrationDuration
+96.0
 1
 0
 Number
 
 INPUTBOX
-244
-266
-399
-326
-gui-disintegrationDuration
-96.0
+248
+147
+323
+207
+gui-alpha
+100.0
+1
+0
+Number
+
+INPUTBOX
+0
+146
+69
+206
+gui-LifeInit
+500.0
 1
 0
 Number
@@ -1584,6 +1467,34 @@ NetLogo 3D 6.1.0
       <value value="72"/>
       <value value="96"/>
       <value value="120"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="NinaExploInPresenceOfMonocytes" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="312"/>
+    <metric>getViability</metric>
+    <metric>getRemainingCellRatio</metric>
+    <metric>getSeed</metric>
+    <enumeratedValueSet variable="gui-BlockedApoptosisThreshold">
+      <value value="100"/>
+      <value value="500"/>
+      <value value="1000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="gui-alpha">
+      <value value="10"/>
+      <value value="50"/>
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="gui-NLCThreshold">
+      <value value="1000"/>
+      <value value="1500"/>
+      <value value="2000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="diffusion-rate">
+      <value value="1"/>
+      <value value="5"/>
+      <value value="10"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
