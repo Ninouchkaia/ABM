@@ -69,10 +69,6 @@ NurseLikeCells-own[
   SignalStrength
 ]
 
-Phagocytes-own[
-  SignalStrength
-]
-
 ;;;;;;;;;;;;;;;;;
 ;;;;; SETUP ;;;;;
 ;;;;;;;;;;;;;;;;;
@@ -80,8 +76,8 @@ Phagocytes-own[
 to setup
   clear-all
   reset-ticks
-  let seed 42
-  ;;set mySeed behaviorspace-run-number * random 42
+  ;let seed 42
+  set mySeed behaviorspace-run-number * 42
   random-seed mySeed
   setup-Globals
   setup-World
@@ -178,10 +174,21 @@ to setup-NeedSignalCancerCells
   ]
   end
 
-;;UTILS
+
+;;;;;;;;;;;;;;
+;;;;; UTILS ;;
+;;;;;;;;;;;;;;
 
 to-report getSeed
   report mySeed
+end
+
+to-report getNumberNLC
+  report count NurseLikeCells
+end
+
+to-report getNumberMono
+  report count Monocytes
 end
 
 to-report getDeathThreshold
@@ -192,9 +199,10 @@ to-report getSignalStrengthDistribution
   report sort [SignalStrength] of Monocytes
 end
 
-to-report getchemBMean
+to-report getLifeMean
   let CancerCells (turtle-set (LateApoCancerCells) (NeedSignalCancerCells) (BlockedApoCancerCells))
-  report mean sort [Life] of CancerCells
+  let myCancerCells (turtle-set (NeedSignalCancerCells) (BlockedApoCancerCells))
+  report mean sort [Life] of myCancerCells
 end
 
 to-report getSignalStrengthMean
@@ -230,6 +238,17 @@ to phagocyte_Monocyte ;; phagocytosis for Monocytes
     ask one-of debris [die] ;; monocytes can eat debris one by one, there is no change in their phagocytosis efficiency with time.
   ]
     [ move 3 nobody ]
+end
+
+to phagocyte_NLC ;; phagocytosis for NLC
+    ;; look for dead or late apoptotic cells in the neighbors
+    let debris (turtle-set (DeadCancerCells-on neighbors) (LateApoCancerCells-on neighbors))
+    ifelse (any? debris)
+    ;; phagocyte
+  [
+    ask one-of debris [die] ;; monocytes can eat debris one by one, there is no change in their phagocytosis efficiency with time.
+  ]
+    [ move 1 nobody ]
 end
 
 to move [steps goal] ;; agent procedure
@@ -326,7 +345,7 @@ to update-positions
   [
     ifelse (random NLCThreshold <= SignalStrength)
     [ move 2 nobody ]
-    [ phagocyte_Monocyte ]
+    [ phagocyte_NLC ]
   ]
 
 end
@@ -351,7 +370,6 @@ to update-chemicals
 
   ;; BlockedApoCancerCells actions
   ask BlockedApoCancerCells
-  ;[ if ( [Chemical_A] of patch-here < 1)
     [ set Life Life - 1]
   ;]
 
@@ -414,16 +432,7 @@ to update-breeds
   ;; DeadCancerCells
   ask DeadCancerCells
   [
-    ifelse ( Life <= DisintegrationThreshold )
-    [ die ]
-    [
-      ;;set probaDie = abs (Life - DisintegrationThreshold) ;;( |0 - 20| = 20, random 100 < 20 = 20/100
-      ;;if ( random 100 < probaDie ) :
-      ;[
-      set Life Life - 1 ;* death_rate
-      ;]
-    ]
-
+    if ( Life <= DisintegrationThreshold ) [ die ]
   ]
 
 
@@ -442,7 +451,6 @@ to update-breeds
     [
       ;; change from NeedSignalCancerCell to BlockedApoCancerCell
       set breed BlockedApoCancerCells
-      ;set Life random-float (BlockedApoptosisThreshold / 2)
       set color pink + 2.5
       set shape "default"
     ]
@@ -484,7 +492,6 @@ to update-breeds
       set color green
       set shape "pentagon"
       set size 2
-      ;set SignalStrength SignalStrength
     ]
   ]
 
@@ -498,7 +505,14 @@ to update-breeds
       set color magenta
       set shape "pentagon"
       set size 2
-      ;set SignalStrength 0
+    ]
+    if ( SignalStrength >= NLCThreshold) ;; to be parameterized
+    [
+      ;; change from NurseLikeCells to Phagocytes (M0)
+      ;set breed Phagocytes
+      set color green
+      set shape "pentagon"
+      set size 2
     ]
   ]
 
@@ -712,7 +726,7 @@ INPUTBOX
 194
 147
 gui-prop-monocytes-init
-2.0
+0.0
 1
 0
 Number
@@ -723,7 +737,7 @@ INPUTBOX
 278
 147
 gui-prop-apoptotic-init
-40.0
+6.0
 1
 0
 Number
@@ -774,7 +788,6 @@ true
 PENS
 "monocytes" 1.0 0 -13345367 true "" "plot count Monocytes"
 "NLCs" 1.0 0 -10899396 true "" "plot count NurseLikeCells "
-"phagocytes" 1.0 0 -7500403 true "" "plot count Phagocytes"
 
 MONITOR
 536
@@ -804,7 +817,7 @@ INPUTBOX
 62
 264
 gui-NLCThreshold
-2000.0
+1500.0
 1
 0
 Number
@@ -888,7 +901,7 @@ quantity
 0.0
 10.0
 0.0
-10.0
+2.0
 true
 true
 "" ""
@@ -1469,16 +1482,16 @@ NetLogo 3D 6.1.0
       <value value="120"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="NinaExploInPresenceOfMonocytes" repetitions="1" runMetricsEveryStep="false">
+  <experiment name="NinaExploInPresenceOfMonocytes" repetitions="3" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <timeLimit steps="312"/>
     <metric>getViability</metric>
     <metric>getRemainingCellRatio</metric>
     <metric>getSeed</metric>
+    <metric>getNumberNLC</metric>
+    <metric>getNUmberMono</metric>
     <enumeratedValueSet variable="gui-BlockedApoptosisThreshold">
-      <value value="100"/>
-      <value value="500"/>
       <value value="1000"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="gui-alpha">
@@ -1489,12 +1502,11 @@ NetLogo 3D 6.1.0
     <enumeratedValueSet variable="gui-NLCThreshold">
       <value value="1000"/>
       <value value="1500"/>
-      <value value="2000"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="diffusion-rate">
       <value value="1"/>
-      <value value="5"/>
       <value value="10"/>
+      <value value="50"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
