@@ -1,0 +1,23 @@
+BehaviorSpace results (NetLogo 3D 6.1.0);;;;;;
+CLL-update-fusionReversible-forSeedExperiment_test_deleting_some_parameters_as_theyre_probably_dependent-cleaningUpTheCode.nlogo3d;;;;;;
+NinaExploInAbsenceOfMonocytes;;;;;;
+06/13/2020 15:25:29:947 +0200;;;;;;
+min-pxcor;max-pxcor;min-pycor;max-pycor;;;
+-72;72;-72;72;;;
+[run number];gui-LateApoThreshold;gui-apoptosisDuration;gui-disintegrationDuration;[step];getViability;getRemainingCellRatio
+1;4;24;24;216;6,133625411;36,52
+2;4;24;28;216;5,720122574;39,16
+5;4;28;24;216;5,720122574;39,16
+3;4;24;32;216;5,34351145;41,92
+6;4;28;28;216;5,34351145;41,92
+9;4;32;24;216;5,34351145;41,92
+4;4;24;36;216;4,955752212;45,2
+7;4;28;32;216;4,955752212;45,2
+10;4;32;28;216;4,955752212;45,2
+13;4;36;24;216;4,955752212;45,2
+8;4;28;36;216;4,709840202;47,56
+11;4;32;32;216;4,709840202;47,56
+14;4;36;28;216;4,709840202;47,56
+12;4;32;36;216;4,388714734;51,04
+15;4;36;32;216;4,388714734;51,04
+16;4;36;36;216;4,172876304;53,68
