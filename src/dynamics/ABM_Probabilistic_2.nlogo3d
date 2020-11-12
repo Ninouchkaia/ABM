@@ -477,7 +477,7 @@ to update-chemicals
   ask Monocytes
   [
     if ( any? NeedSignalCancerCells-on neighbors or any? BlockedApoCancerCells-on neighbors)
-    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) ]; + count(BlockedApoCancerCells-on neighbors)]; + count(LateApoCancerCells-on neighbors)]
+    [ set SignalStrength SignalStrength + count(NeedSignalCancerCells-on neighbors) + count(BlockedApoCancerCells-on neighbors)]; + count(LateApoCancerCells-on neighbors)]
   ]
 
   ;; NurseLikeCells actions
